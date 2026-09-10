@@ -1,0 +1,6 @@
+2026-09-08 repeat verification
+Windows PostgreSQL 17.5, dedicated supermarket_test on 127.0.0.1:25436
+8 unittest integration tests: auth, concurrency, money, pagination, permissions, repeat_and_snapshot, transitions, validation
+Ran 8 tests in 16.874s
+OK; skipped=0
+Both API/admin connections checked against the same test database before mutation.

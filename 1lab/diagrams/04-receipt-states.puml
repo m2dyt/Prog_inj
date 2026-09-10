@@ -1,0 +1,23 @@
+@startuml
+skinparam defaultFontName Arial
+skinparam shadowing false
+state "Черновик\ndraft" as Draft
+state "Оплачен\npaid" as Paid
+state "Отменён\ncancelled" as Cancelled
+[*] --> Draft : POST receipt [корзина допустима]\n/ сохранить снимки цен
+Draft --> Paid : pay [остатки достаточны]\n/ списать и записать движения атомарно
+Draft --> Cancelled : cancel / без изменения остатка
+Draft --> Draft : pay [нет остатка] / ошибка 409, rollback
+Paid : повтор pay / вернуть существующий результат
+Paid : cancel / ошибка 409
+Cancelled : повтор cancel / вернуть существующий результат
+Cancelled : pay / ошибка 409
+note bottom of Draft
+Черновик не резервирует остаток.
+Цена фиксируется при создании.
+end note
+note bottom of Paid
+Завершённый документ неизменен.
+Повтор не вызывает новое списание.
+end note
+@enduml

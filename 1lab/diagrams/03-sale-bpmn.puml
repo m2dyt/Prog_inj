@@ -1,0 +1,50 @@
+@startuml
+allowmixing
+left to right direction
+skinparam defaultFontName Arial
+skinparam shadowing false
+skinparam rectangleRoundCorner 18
+skinparam linetype ortho
+title Продажа на кассе · графическое представление BPMN
+rectangle "Супермаркет" {
+  rectangle "Дорожка: кассир" {
+    circle " " as Start #DCEAD8
+    rectangle "Выбрать товары\nи количество" as Cart
+    rectangle "Получить наличные\nи подтвердить" as Cash
+    diamond "X" as Decision
+    rectangle "Отменить покупку" as Abort
+  }
+  rectangle "Дорожка: информационная система" {
+    rectangle "Проверить корзину\nи создать черновик" as Draft
+    diamond "X" as Valid
+    rectangle "Сообщить ошибку" as Error
+    rectangle "Повторно проверить\nостатки под блокировкой" as Check
+    diamond "X" as Available
+    rectangle "Сообщить о нехватке;\nсохранить черновик" as StockError
+    rectangle "Отменить черновик" as Cancel
+    rectangle "Списать остатки;\nсохранить paid и движения\nв одной транзакции" as Commit
+    circle " " as End #DCEAD8
+  }
+}
+Start --> Cart
+Cart --> Draft
+Draft --> Valid
+Valid --> Error : ошибка
+Error --> Cart
+Valid --> Decision : черновик создан
+Decision --> Cash : покупка подтверждена
+Decision --> Abort : отказ
+Abort --> Cancel
+Cash --> Check
+Check --> Available
+Available --> Commit : достаточно
+Available --> StockError : недостаточно
+StockError --> Decision : повтор или отмена
+Commit --> End
+Cancel --> End
+legend bottom
+Круг — событие; скруглённый блок — задача; ромб — исключающий шлюз.
+Семантический BPMN 2.0 XML: 03-sale.bpmn.
+Наличные подтверждаются сотрудником. Внешний платёжный сервис не используется.
+endlegend
+@enduml

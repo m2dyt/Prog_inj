@@ -1,0 +1,10 @@
+{
+  "requests": 200,
+  "concurrency": 20,
+  "p50_ms": 177.79,
+  "p95_ms": 254.65,
+  "max_ms": 328.48,
+  "http_errors": 0,
+  "wrong_page_sizes": 0,
+  "environment": "Windows, PostgreSQL 17.5, local FastAPI without Nginx; not the target Linux VM SLA test"
+}

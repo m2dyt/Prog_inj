@@ -1,0 +1,16 @@
+{
+  "date": "2026-09-08",
+  "result": "PASS",
+  "redmine": "6.1.4",
+  "project": "supermarket-36",
+  "issues": 15,
+  "members": 3,
+  "trackers": 3,
+  "relations": 18,
+  "theme": "supermarket",
+  "student_project_http": 200,
+  "student_admin_http": 403,
+  "workflow_forbids_direct_close": true,
+  "lr4_assigned_to": "student_a",
+  "repeat_setup_issues": 15
+}

@@ -1,0 +1,29 @@
+name: supermarket-lab3-tests
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: supermarket_test
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Run setup.sh first}
+      APP_DB_PASSWORD: ${APP_DB_PASSWORD:?Run setup.sh first}
+      ADMIN_DB_PASSWORD: ${ADMIN_DB_PASSWORD:?Run setup.sh first}
+      POSTGRES_INITDB_ARGS: --auth-host=scram-sha-256
+    volumes:
+      - ./db/10-init.sh:/docker-entrypoint-initdb.d/10-init.sh:ro
+      - ./init.sql:/opt/supermarket/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d supermarket_test"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+  tests:
+    build: ./backend
+    environment:
+      DATABASE_URL: postgresql://market_app:${APP_DB_PASSWORD:?Run setup.sh first}@db:5432/supermarket_test
+      TEST_ADMIN_URL: postgresql://market_admin:${ADMIN_DB_PASSWORD:?Run setup.sh first}@db:5432/supermarket_test
+    volumes:
+      - ./backend/tests:/app/tests:ro
+    command: ["python", "-m", "unittest", "discover", "-s", "tests", "-v"]
+    depends_on:
+      db: {condition: service_healthy}

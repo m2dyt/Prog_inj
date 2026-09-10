@@ -1,0 +1,21 @@
+@startuml
+skinparam defaultFontName Arial
+skinparam shadowing false
+node "Рабочая станция" {
+  artifact "Браузер\nReact + JavaScript" as browser
+}
+node "Linux VM\n4 vCPU / 8 GB / SSD" {
+  node "Контейнер Nginx" as nginx
+  node "Контейнер FastAPI\nPython" as api
+  database "Контейнер PostgreSQL" as db
+  artifact "Постоянный том БД" as volume
+}
+browser --> nginx : HTTP/JSON\nHTTPS в эксплуатации
+nginx --> api : HTTP /api
+api --> db : PostgreSQL protocol\nпараметризованные запросы
+db -- volume
+note bottom of db
+Порт БД не публикуется наружу.
+API использует ограниченную роль.
+end note
+@enduml

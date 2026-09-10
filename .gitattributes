@@ -1,0 +1,13 @@
+* text=auto
+*.sh text eol=lf
+docforge text eol=lf
+*.sql text eol=lf
+*.py text eol=lf
+*.jsx text eol=lf
+*.js text eol=lf
+*.md text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.puml text eol=lf
+*.bpmn text eol=lf
+*.csv text eol=crlf

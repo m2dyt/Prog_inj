@@ -1,0 +1,38 @@
+@startuml
+skinparam defaultFontName Arial
+skinparam shadowing false
+object "cashier2 : Сотрудник" as u {
+  id = 2
+  role = cashier
+}
+object "milk101 : Товар" as p {
+  id = 101
+  name = Молоко 1 л
+  price = 99.90
+  stock = 8
+}
+object "receipt501 : Чек" as r {
+  id = 501
+  status = paid
+  total (derived) = 199.80
+}
+object "line501_101 : СтрокаЧека" as i {
+  receipt_id = 501
+  product_id = 101
+  product_name = Молоко 1 л
+  quantity = 2
+  unit_price = 99.90
+  line_total = 199.80
+}
+object "movement9001 : Движение" as m {
+  id = 9001
+  delta = -2
+  reason = Продажа на кассе
+}
+u -- r : оформил
+r *-- i : содержит
+i -- p : товар
+p -- m : изменён
+r -- m : основание
+u -- m : выполнил
+@enduml

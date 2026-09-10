@@ -1,0 +1,6 @@
+@import url(../../../stylesheets/application.css);
+#top-menu { background: #163d33; }
+#header { background: #226a53; }
+#main-menu li a.selected { color: #184a3b; }
+a, a:link, a:visited { color: #226a53; }
+.issue.details { border-left: 4px solid #226a53; }

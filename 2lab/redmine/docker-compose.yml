@@ -1,0 +1,46 @@
+name: supermarket-redmine
+services:
+  redmine-db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: redmine
+      POSTGRES_USER: redmine
+      POSTGRES_PASSWORD: ${REDMINE_DB_PASSWORD:?Run setup.sh}
+    volumes: ["redmine_db:/var/lib/postgresql/data"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U redmine -d redmine"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+  redmine:
+    image: redmine:6.1
+    environment:
+      REDMINE_DB_POSTGRES: redmine-db
+      REDMINE_DB_DATABASE: redmine
+      REDMINE_DB_USERNAME: redmine
+      REDMINE_DB_PASSWORD: ${REDMINE_DB_PASSWORD:?Run setup.sh}
+      REDMINE_SECRET_KEY_BASE: ${REDMINE_SECRET_KEY_BASE:?Run setup.sh}
+      SECRET_KEY_BASE: ${REDMINE_SECRET_KEY_BASE:?Run setup.sh}
+      REDMINE_ADMIN_PASSWORD: ${REDMINE_ADMIN_PASSWORD:?Run setup.sh}
+      STUDENT_A_PASSWORD: ${STUDENT_A_PASSWORD:?Run setup.sh}
+      STUDENT_B_PASSWORD: ${STUDENT_B_PASSWORD:?Run setup.sh}
+      STUDENT_C_PASSWORD: ${STUDENT_C_PASSWORD:?Run setup.sh}
+    volumes:
+      - redmine_files:/usr/src/redmine/files
+      - ./bootstrap.rb:/opt/lab/bootstrap.rb:ro
+      - ../backlog.csv:/opt/lab/backlog.csv:ro
+      - ./themes/supermarket:/usr/src/redmine/themes/supermarket:ro
+    ports: ["127.0.0.1:${REDMINE_PORT:-8085}:3000"]
+    depends_on:
+      redmine-db: {condition: service_healthy}
+    healthcheck:
+      test: ["CMD", "ruby", "-rnet/http", "-e", "exit(Net::HTTP.get_response(URI('http://127.0.0.1:3000/login')).code.to_i < 400 ? 0 : 1)"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 60s
+    restart: unless-stopped
+volumes:
+  redmine_db:
+  redmine_files:

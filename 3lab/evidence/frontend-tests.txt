@@ -1,0 +1,10 @@
+
+ RUN  v4.0.18 C:/Users/m2dyt/Documents/ChatGPT/прог инж/deliverable/3lab/frontend
+
+ ✓ src/Catalog.test.jsx (5 tests) 483ms
+
+ Test Files  1 passed (1)
+      Tests  5 passed (5)
+   Start at  15:58:58
+   Duration  2.82s (transform 126ms, setup 488ms, import 245ms, tests 483ms, environment 1.33s)
+

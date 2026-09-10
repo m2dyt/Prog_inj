@@ -1,0 +1,266 @@
+<?xml version='1.0' encoding='utf-8'?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Definitions_Sale" targetNamespace="https://example.org/supermarket36">
+  <bpmn:process id="SaleProcess" name="Продажа на кассе" isExecutable="false">
+    <bpmn:laneSet id="Lanes">
+      <bpmn:lane id="CashierLane" name="Кассир">
+        <bpmn:flowNodeRef>Start</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Cart</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Decision</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Cash</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Abort</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="SystemLane" name="Информационная система">
+        <bpmn:flowNodeRef>Draft</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Valid</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Error</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Check</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Available</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Cancel</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Commit</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>End</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>StockError</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="Start" name="Начало покупки">
+      <bpmn:outgoing>f1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:userTask id="Cart" name="Выбрать товары и количество">
+      <bpmn:incoming>f1</bpmn:incoming>
+      <bpmn:incoming>f5</bpmn:incoming>
+      <bpmn:outgoing>f2</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:serviceTask id="Draft" name="Проверить корзину и создать черновик">
+      <bpmn:incoming>f2</bpmn:incoming>
+      <bpmn:outgoing>f3</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:exclusiveGateway id="Valid" name="Данные допустимы" default="f4">
+      <bpmn:incoming>f3</bpmn:incoming>
+      <bpmn:outgoing>f4</bpmn:outgoing>
+      <bpmn:outgoing>f6</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:serviceTask id="Error" name="Сообщить ошибку">
+      <bpmn:incoming>f4</bpmn:incoming>
+      <bpmn:outgoing>f5</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:exclusiveGateway id="Decision" name="Покупка подтверждена" default="f8">
+      <bpmn:incoming>f6</bpmn:incoming>
+      <bpmn:incoming>f16</bpmn:incoming>
+      <bpmn:outgoing>f7</bpmn:outgoing>
+      <bpmn:outgoing>f8</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:userTask id="Cash" name="Получить наличные и подтвердить">
+      <bpmn:incoming>f7</bpmn:incoming>
+      <bpmn:outgoing>f9</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:userTask id="Abort" name="Отменить покупку">
+      <bpmn:incoming>f8</bpmn:incoming>
+      <bpmn:outgoing>f10</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:serviceTask id="Check" name="Повторно проверить остатки под блокировкой">
+      <bpmn:incoming>f9</bpmn:incoming>
+      <bpmn:outgoing>f11</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:exclusiveGateway id="Available" name="Остатки достаточны" default="f13">
+      <bpmn:incoming>f11</bpmn:incoming>
+      <bpmn:outgoing>f12</bpmn:outgoing>
+      <bpmn:outgoing>f13</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:serviceTask id="Cancel" name="Отменить черновик">
+      <bpmn:incoming>f10</bpmn:incoming>
+      <bpmn:outgoing>f14</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="Commit" name="Атомарно сохранить оплату и списать остатки">
+      <bpmn:incoming>f12</bpmn:incoming>
+      <bpmn:outgoing>f15</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:endEvent id="End" name="Покупка завершена">
+      <bpmn:incoming>f14</bpmn:incoming>
+      <bpmn:incoming>f15</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="f1" sourceRef="Start" targetRef="Cart" />
+    <bpmn:sequenceFlow id="f2" sourceRef="Cart" targetRef="Draft" />
+    <bpmn:sequenceFlow id="f3" sourceRef="Draft" targetRef="Valid" />
+    <bpmn:sequenceFlow id="f4" sourceRef="Valid" targetRef="Error" name="Ошибка" />
+    <bpmn:sequenceFlow id="f5" sourceRef="Error" targetRef="Cart" />
+    <bpmn:sequenceFlow id="f6" sourceRef="Valid" targetRef="Decision" name="Черновик создан">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">draft_created</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="f7" sourceRef="Decision" targetRef="Cash" name="Да">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">customer_confirmed</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="f8" sourceRef="Decision" targetRef="Abort" name="Нет" />
+    <bpmn:sequenceFlow id="f9" sourceRef="Cash" targetRef="Check" />
+    <bpmn:sequenceFlow id="f10" sourceRef="Abort" targetRef="Cancel" />
+    <bpmn:sequenceFlow id="f11" sourceRef="Check" targetRef="Available" />
+    <bpmn:sequenceFlow id="f12" sourceRef="Available" targetRef="Commit" name="Да">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">stock_available</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="f13" sourceRef="Available" targetRef="StockError" name="Недостаточно" />
+    <bpmn:sequenceFlow id="f14" sourceRef="Cancel" targetRef="End" />
+    <bpmn:sequenceFlow id="f15" sourceRef="Commit" targetRef="End" />
+    <bpmn:serviceTask id="StockError" name="Сообщить о нехватке и сохранить черновик">
+      <bpmn:incoming>f13</bpmn:incoming>
+      <bpmn:outgoing>f16</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sequenceFlow id="f16" sourceRef="StockError" targetRef="Decision" name="Повтор или отмена" />
+  </bpmn:process>
+  <bpmn:collaboration id="SaleCollaboration">
+    <bpmn:participant id="SupermarketPool" name="Продажа в супермаркете" processRef="SaleProcess" />
+  </bpmn:collaboration>
+  <bpmndi:BPMNDiagram id="SaleDiagram">
+    <bpmndi:BPMNPlane id="SalePlane" bpmnElement="SaleCollaboration">
+      <bpmndi:BPMNShape id="SupermarketPool_di" bpmnElement="SupermarketPool" isHorizontal="true">
+        <dc:Bounds x="50" y="80" width="1840" height="660" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="CashierLane_di" bpmnElement="CashierLane" isHorizontal="true">
+        <dc:Bounds x="80" y="80" width="1810" height="240" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="SystemLane_di" bpmnElement="SystemLane" isHorizontal="true">
+        <dc:Bounds x="80" y="320" width="1810" height="420" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Start_di" bpmnElement="Start">
+        <dc:Bounds x="140" y="163" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Cart_di" bpmnElement="Cart">
+        <dc:Bounds x="240" y="136" width="180" height="90" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Draft_di" bpmnElement="Draft">
+        <dc:Bounds x="460" y="390" width="180" height="90" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Valid_di" bpmnElement="Valid" isMarkerVisible="true">
+        <dc:Bounds x="690" y="410" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="650" y="343" width="130" height="35" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Error_di" bpmnElement="Error">
+        <dc:Bounds x="460" y="600" width="180" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Decision_di" bpmnElement="Decision" isMarkerVisible="true">
+        <dc:Bounds x="790" y="156" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="701" y="124" width="90" height="40" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Cash_di" bpmnElement="Cash">
+        <dc:Bounds x="900" y="136" width="180" height="90" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Abort_di" bpmnElement="Abort">
+        <dc:Bounds x="900" y="251" width="180" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Check_di" bpmnElement="Check">
+        <dc:Bounds x="1130" y="390" width="180" height="90" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Available_di" bpmnElement="Available" isMarkerVisible="true">
+        <dc:Bounds x="1360" y="410" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1320" y="343" width="130" height="35" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Commit_di" bpmnElement="Commit">
+        <dc:Bounds x="1470" y="390" width="230" height="90" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="End_di" bpmnElement="End">
+        <dc:Bounds x="1780" y="417" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Cancel_di" bpmnElement="Cancel">
+        <dc:Bounds x="1130" y="600" width="180" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="StockError_di" bpmnElement="StockError">
+        <dc:Bounds x="1470" y="590" width="230" height="90" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="f1_di" bpmnElement="f1">
+        <di:waypoint x="176" y="181" />
+        <di:waypoint x="240" y="181" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f2_di" bpmnElement="f2">
+        <di:waypoint x="420" y="181" />
+        <di:waypoint x="550" y="181" />
+        <di:waypoint x="550" y="390" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f3_di" bpmnElement="f3">
+        <di:waypoint x="640" y="435" />
+        <di:waypoint x="690" y="435" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f4_di" bpmnElement="f4">
+        <di:waypoint x="715" y="460" />
+        <di:waypoint x="715" y="640" />
+        <di:waypoint x="640" y="640" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="726" y="535" width="90" height="20" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f5_di" bpmnElement="f5">
+        <di:waypoint x="460" y="640" />
+        <di:waypoint x="330" y="640" />
+        <di:waypoint x="330" y="226" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f6_di" bpmnElement="f6">
+        <di:waypoint x="740" y="435" />
+        <di:waypoint x="770" y="435" />
+        <di:waypoint x="770" y="181" />
+        <di:waypoint x="790" y="181" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="640" y="365" width="125" height="20" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f7_di" bpmnElement="f7">
+        <di:waypoint x="840" y="181" />
+        <di:waypoint x="900" y="181" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f8_di" bpmnElement="f8">
+        <di:waypoint x="815" y="206" />
+        <di:waypoint x="815" y="276" />
+        <di:waypoint x="900" y="276" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f9_di" bpmnElement="f9">
+        <di:waypoint x="1080" y="181" />
+        <di:waypoint x="1220" y="181" />
+        <di:waypoint x="1220" y="390" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f10_di" bpmnElement="f10">
+        <di:waypoint x="990" y="301" />
+        <di:waypoint x="990" y="640" />
+        <di:waypoint x="1130" y="640" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f11_di" bpmnElement="f11">
+        <di:waypoint x="1310" y="435" />
+        <di:waypoint x="1360" y="435" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f12_di" bpmnElement="f12">
+        <di:waypoint x="1410" y="435" />
+        <di:waypoint x="1470" y="435" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f13_di" bpmnElement="f13">
+        <di:waypoint x="1385" y="460" />
+        <di:waypoint x="1385" y="635" />
+        <di:waypoint x="1470" y="635" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1395" y="535" width="100" height="20" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f14_di" bpmnElement="f14">
+        <di:waypoint x="1310" y="640" />
+        <di:waypoint x="1340" y="640" />
+        <di:waypoint x="1340" y="710" />
+        <di:waypoint x="1840" y="710" />
+        <di:waypoint x="1840" y="435" />
+        <di:waypoint x="1816" y="435" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f15_di" bpmnElement="f15">
+        <di:waypoint x="1700" y="435" />
+        <di:waypoint x="1780" y="435" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f16_di" bpmnElement="f16">
+        <di:waypoint x="1700" y="635" />
+        <di:waypoint x="1730" y="635" />
+        <di:waypoint x="1730" y="105" />
+        <di:waypoint x="815" y="105" />
+        <di:waypoint x="815" y="156" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1740" y="343" width="90" height="35" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

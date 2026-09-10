@@ -1,0 +1,46 @@
+@startuml
+left to right direction
+skinparam defaultFontName Arial
+skinparam shadowing false
+actor "Кассир" as Cashier
+actor "Менеджер" as Manager
+actor "Аудитор" as Auditor
+actor "Администратор БД" as DBA
+rectangle "ИС супермаркета · вариант 36" {
+  usecase "UC01\nВойти / завершить сеанс" as Login
+  usecase "UC02\nНайти и просмотреть товар" as Browse
+  usecase "UC03\nСоздать / изменить /\nархивировать карточку" as Manage
+  usecase "UC04\nСкорректировать остаток" as Stock
+  usecase "UC05\nСформировать черновик" as Draft
+  usecase "UC06\nПодтвердить оплату" as Pay
+  usecase "UC07\nОтменить черновик" as Cancel
+  usecase "UC08\nПросмотреть чеки" as History
+  usecase "Проверить остатки" as Check
+  usecase "Зафиксировать движения" as Movement
+  usecase "UC09\nАдминистрировать БД" as Admin
+}
+Cashier --> Login
+Cashier --> Browse
+Cashier --> Draft
+Cashier --> Pay
+Cashier --> Cancel
+Cashier --> History
+Manager --> Login
+Manager --> Browse
+Manager --> Manage
+Manager --> Stock
+Manager --> Draft
+Manager --> Pay
+Manager --> Cancel
+Manager --> History
+Auditor --> Login
+Auditor --> Browse
+Auditor --> History
+DBA --> Admin
+Pay .> Check : <<include>>
+Pay .> Movement : <<include>>
+note bottom of History
+Кассир — собственные чеки.
+Менеджер и аудитор — все чеки.
+end note
+@enduml
