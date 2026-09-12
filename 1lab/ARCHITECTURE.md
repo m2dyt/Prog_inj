@@ -45,13 +45,19 @@
 
 | Модуль | Планируемое место реализации на этапе ЛР №3 |
 |---|---|
-| Auth, Catalog, Inventory, Sales | `backend/app/main.py` |
+| Сборка приложения и lifecycle | `backend/app/main.py` |
+| HTTP-маршруты Auth, Catalog, Sales | `backend/app/routers/auth.py`, `products.py`, `receipts.py` |
+| Предметные операции Catalog, Inventory, Sales | `backend/app/services/products.py`, `receipts.py` |
+| Аутентификация и проверка ролей | `backend/app/dependencies.py` |
+| Преобразование ошибок в HTTP-ответы | `backend/app/errors.py` |
 | Validation | `backend/app/schemas.py` |
 | Security | `backend/app/security.py` |
 | DB | `backend/app/db.py` |
 | Схема и права БД | `init.sql`, `db/pg_hba.conf` |
 | Web Catalog | `frontend/src/Catalog.jsx` |
-| Checkout, вход, история | `frontend/src/App.jsx` |
+| Оркестрация состояния интерфейса | `frontend/src/App.jsx` |
+| Вход, навигация, редактор товара | `frontend/src/components/*.jsx` |
+| Checkout и история | `frontend/src/features/checkout/*.jsx`, `frontend/src/features/receipts/*.jsx` |
 | API-client | `frontend/src/api.js` |
 | Стили | `frontend/src/styles.css` |
 | Развёртывание прикладной версии | `docker-compose.yml`, Dockerfile компонентов |

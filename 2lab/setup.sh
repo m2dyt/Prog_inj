@@ -37,7 +37,7 @@ if [[ ! -e "$script_dir/.env" ]]; then
   printf 'POSTGRES_PASSWORD=%s\nHTTP_PORT=8082\nREDMINE_DB_PASSWORD=%s\nREDMINE_PORT=8085\n' "$(openssl rand -hex 24)" "$(openssl rand -hex 24)" > "$tmp_file"
   mv -- "$tmp_file" "$script_dir/.env"; tmp_file=''
 fi
-for key in REDMINE_ADMIN_PASSWORD STUDENT_A_PASSWORD STUDENT_B_PASSWORD STUDENT_C_PASSWORD REDMINE_SECRET_KEY_BASE; do
+for key in REDMINE_SECRET_KEY_BASE; do
   if ! grep -q "^${key}=" "$script_dir/.env"; then
     printf '%s=%s\n' "$key" "$(openssl rand -hex 32)" >> "$script_dir/.env"
   fi
@@ -50,9 +50,7 @@ fi
 if ((check)); then printf 'Окружение ЛР №2 проверено.\n'; exit 0; fi
 "${compose[@]}" up -d --build --wait --wait-timeout 180
 if ((redmine)); then
-  docker compose --env-file "$script_dir/.env" -f "$script_dir/redmine/docker-compose.yml" up -d --wait --wait-timeout 300
-  docker compose --env-file "$script_dir/.env" -f "$script_dir/redmine/docker-compose.yml" exec -T redmine \
-    sh -c 'bundle exec rails runner -e production - < /opt/lab/bootstrap.rb'
+  docker compose --env-file "$script_dir/.env" -f "$script_dir/redmine/docker-compose.yml" up -d
 fi
 "${compose[@]}" ps
-printf 'ЛР №2: среда подготовлена. Адрес и настройка Redmine описаны в README.md.\n'
+printf 'ЛР №2: среда подготовлена. Redmine настраивается по REDMINE.md через веб-интерфейс.\n'
