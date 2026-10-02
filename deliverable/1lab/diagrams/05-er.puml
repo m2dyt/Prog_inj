@@ -1,0 +1,54 @@
+@startuml
+skinparam defaultFontName Arial
+skinparam linetype ortho
+entity "Сотрудник" as u {
+* id : BIGINT <<PK>>
+--
+username : VARCHAR <<UQ>>
+role : ENUM
+}
+entity "Товар" as p {
+* id : BIGINT <<PK>>
+--
+barcode : VARCHAR <<UQ>>
+name : VARCHAR
+price : DECIMAL
+stock : INTEGER
+}
+entity "Чек" as r {
+* id : BIGINT <<PK>>
+--
+request_id : UUID <<UQ>>
+cashier_id : BIGINT <<FK>>
+status : ENUM
+}
+entity "Строка чека" as i {
+* receipt_id : BIGINT <<PK,FK>>
+* product_id : BIGINT <<PK,FK>>
+--
+quantity : INTEGER
+unit_price : DECIMAL
+product_name : VARCHAR
+}
+entity "Движение остатка" as m {
+* id : BIGINT <<PK>>
+--
+product_id : BIGINT <<FK>>
+actor_id : BIGINT <<FK>>
+receipt_id : BIGINT <<FK,nullable>>
+delta : INTEGER
+}
+entity "Сеанс" as s {
+* token_hash : CHAR <<PK>>
+--
+user_id : BIGINT <<FK>>
+expires_at : TIMESTAMPTZ
+}
+u ||--o{ r
+r ||--|{ i
+p ||--o{ i
+p ||--o{ m
+u ||--o{ m
+r |o--o{ m
+u ||--o{ s
+@enduml

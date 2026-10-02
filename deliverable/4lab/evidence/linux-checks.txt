@@ -1,0 +1,16 @@
+Создан: первый файл.txt
+Создан: second.txt
+Текст изменён: первый файл.txt
+Объединено документов: 2
+Объединено документов: 2
+/tmp/tmp.q8bAPUf4vk/root/all.txt -> /tmp/tmp.q8bAPUf4vk/root/all.md
+/tmp/tmp.q8bAPUf4vk/root/second.txt -> /tmp/tmp.q8bAPUf4vk/root/second.md
+/tmp/tmp.q8bAPUf4vk/root/первый файл.txt -> /tmp/tmp.q8bAPUf4vk/root/первый файл.md
+Обработано файлов: 3
+Создан: second.md
+Восстановлен: restored.md
+Файл переименован
+Обработано файлов: 3
+Переместить в корзину: /tmp/tmp.q8bAPUf4vk/root/new.md
+PASS: создание, поиск, merge, буквальная замена, rename, extension, dry-run, корзина, восстановление, ограничения путей и бинарных файлов, отказ при неполном find
+docforge 1.0.0

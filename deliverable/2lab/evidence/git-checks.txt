@@ -1,0 +1,6 @@
+2026-09-08 Ubuntu 24.04.1 WSL2
+Repository: /srv/supermarket36/repository.git
+Accounts: student_a student_b student_c gitservice
+PASS: three clone/fetch/push operations; feature/develop/release/main; actual merge conflict; release tag v1.0.0
+Initial commit 4e5a646; branches 2769f77 and a050e87; merge de4173d; resolved conflict 9300fc0; release cd1a663.
+All demonstration commits authored by Lab automation, not attributed to personal student work.

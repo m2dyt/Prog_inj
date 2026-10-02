@@ -1,0 +1,277 @@
+<?xml version='1.0' encoding='utf-8'?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:ns1="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:ns2="http://www.omg.org/spec/DD/20100524/DC" xmlns:ns3="http://www.omg.org/spec/DD/20100524/DI" id="Definitions_Sale" targetNamespace="https://example.org/supermarket36" exporter="BPMN 2.0 XML">
+  <bpmn:process id="SaleProcess" name="Продажа на кассе" isExecutable="false">
+    <bpmn:laneSet id="SaleLanes">
+      <bpmn:lane id="CashierLane" name="Кассир">
+        <bpmn:flowNodeRef>Start</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Cart</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>ShowTotal</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>BuyerDecision</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>ReceiveCash</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Refund</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="SystemLane" name="Информационная система">
+        <bpmn:flowNodeRef>Draft</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Valid</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>CancelDraft</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Commit</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Available</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>InputError</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>StockError</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>EndInput</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>EndCancelled</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>EndPaid</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>EndRetry</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="Start" name="Начало продажи">
+      <bpmn:outgoing>f1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:userTask id="Cart" name="Выбрать товары и сформировать корзину">
+      <bpmn:incoming>f1</bpmn:incoming>
+      <bpmn:outgoing>f2</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:serviceTask id="Draft" name="Проверить корзину и создать черновик">
+      <bpmn:incoming>f2</bpmn:incoming>
+      <bpmn:outgoing>f3</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:exclusiveGateway id="Valid" name="Данные допустимы?" gatewayDirection="Diverging" default="f5">
+      <bpmn:incoming>f3</bpmn:incoming>
+      <bpmn:outgoing>f4</bpmn:outgoing>
+      <bpmn:outgoing>f5</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:userTask id="ShowTotal" name="Показать итог и спросить покупателя">
+      <bpmn:incoming>f4</bpmn:incoming>
+      <bpmn:outgoing>f7</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:exclusiveGateway id="BuyerDecision" name="Покупка подтверждена?" gatewayDirection="Diverging" default="f9">
+      <bpmn:incoming>f7</bpmn:incoming>
+      <bpmn:outgoing>f8</bpmn:outgoing>
+      <bpmn:outgoing>f9</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:userTask id="ReceiveCash" name="Получить наличные">
+      <bpmn:incoming>f8</bpmn:incoming>
+      <bpmn:outgoing>f11</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:serviceTask id="CancelDraft" name="Отменить черновик">
+      <bpmn:incoming>f9</bpmn:incoming>
+      <bpmn:outgoing>f10</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="Commit" name="Под блокировкой перепроверить остаток; атомарно оплатить и списать">
+      <bpmn:incoming>f11</bpmn:incoming>
+      <bpmn:outgoing>f12</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:exclusiveGateway id="Available" name="Оплата и списание сохранены?" gatewayDirection="Diverging" default="f14">
+      <bpmn:incoming>f12</bpmn:incoming>
+      <bpmn:outgoing>f13</bpmn:outgoing>
+      <bpmn:outgoing>f14</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:serviceTask id="InputError" name="Показать ошибки; остаток не менять">
+      <bpmn:incoming>f5</bpmn:incoming>
+      <bpmn:outgoing>f6</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="StockError" name="Оставить черновик; сообщить о нехватке">
+      <bpmn:incoming>f14</bpmn:incoming>
+      <bpmn:outgoing>f15</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:userTask id="Refund" name="Вернуть наличные">
+      <bpmn:incoming>f15</bpmn:incoming>
+      <bpmn:outgoing>f16</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:endEvent id="EndInput" name="Нужна корректировка">
+      <bpmn:incoming>f6</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:endEvent id="EndCancelled" name="Продажа отменена">
+      <bpmn:incoming>f10</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:endEvent id="EndPaid" name="Продажа оплачена">
+      <bpmn:incoming>f13</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:endEvent id="EndRetry" name="Черновик ожидает повтора">
+      <bpmn:incoming>f16</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="f1" sourceRef="Start" targetRef="Cart" />
+    <bpmn:sequenceFlow id="f2" sourceRef="Cart" targetRef="Draft" />
+    <bpmn:sequenceFlow id="f3" sourceRef="Draft" targetRef="Valid" />
+    <bpmn:sequenceFlow id="f4" sourceRef="Valid" targetRef="ShowTotal" name="Да" />
+    <bpmn:sequenceFlow id="f5" sourceRef="Valid" targetRef="InputError" name="Нет" />
+    <bpmn:sequenceFlow id="f6" sourceRef="InputError" targetRef="EndInput" />
+    <bpmn:sequenceFlow id="f7" sourceRef="ShowTotal" targetRef="BuyerDecision" />
+    <bpmn:sequenceFlow id="f8" sourceRef="BuyerDecision" targetRef="ReceiveCash" name="Да" />
+    <bpmn:sequenceFlow id="f9" sourceRef="BuyerDecision" targetRef="CancelDraft" name="Нет" />
+    <bpmn:sequenceFlow id="f10" sourceRef="CancelDraft" targetRef="EndCancelled" />
+    <bpmn:sequenceFlow id="f11" sourceRef="ReceiveCash" targetRef="Commit" />
+    <bpmn:sequenceFlow id="f12" sourceRef="Commit" targetRef="Available" />
+    <bpmn:sequenceFlow id="f13" sourceRef="Available" targetRef="EndPaid" name="Да" />
+    <bpmn:sequenceFlow id="f14" sourceRef="Available" targetRef="StockError" name="Нет" />
+    <bpmn:sequenceFlow id="f15" sourceRef="StockError" targetRef="Refund" />
+    <bpmn:sequenceFlow id="f16" sourceRef="Refund" targetRef="EndRetry" />
+  </bpmn:process>
+  <bpmn:collaboration id="SaleCollaboration">
+    <bpmn:participant id="SupermarketPool" name="Продажа на кассе" processRef="SaleProcess" />
+  </bpmn:collaboration>
+  <ns1:BPMNDiagram id="SaleDiagram">
+    <ns1:BPMNPlane id="SalePlane" bpmnElement="SaleCollaboration">
+      <ns1:BPMNShape id="SupermarketPool_di" bpmnElement="SupermarketPool" isHorizontal="true">
+        <ns2:Bounds x="40" y="80" width="1040" height="1410" />
+      </ns1:BPMNShape>
+      <ns1:BPMNShape id="CashierLane_di" bpmnElement="CashierLane" isHorizontal="false">
+        <ns2:Bounds x="40" y="80" width="440" height="1410" />
+      </ns1:BPMNShape>
+      <ns1:BPMNShape id="SystemLane_di" bpmnElement="SystemLane" isHorizontal="false">
+        <ns2:Bounds x="480" y="80" width="600" height="1410" />
+      </ns1:BPMNShape>
+      <ns1:BPMNShape id="Start_di" bpmnElement="Start">
+        <ns2:Bounds x="237" y="120" width="36" height="36" />
+      </ns1:BPMNShape>
+      <ns1:BPMNShape id="Cart_di" bpmnElement="Cart">
+        <ns2:Bounds x="145" y="210" width="220" height="90" />
+      </ns1:BPMNShape>
+      <ns1:BPMNShape id="Draft_di" bpmnElement="Draft">
+        <ns2:Bounds x="565" y="320" width="220" height="90" />
+      </ns1:BPMNShape>
+      <ns1:BPMNShape id="Valid_di" bpmnElement="Valid" isMarkerVisible="true">
+        <ns2:Bounds x="650" y="450" width="50" height="50" />
+        <ns1:BPMNLabel>
+          <ns2:Bounds x="580" y="417" width="190" height="25" />
+        </ns1:BPMNLabel>
+      </ns1:BPMNShape>
+      <ns1:BPMNShape id="ShowTotal_di" bpmnElement="ShowTotal">
+        <ns2:Bounds x="145" y="540" width="220" height="90" />
+      </ns1:BPMNShape>
+      <ns1:BPMNShape id="BuyerDecision_di" bpmnElement="BuyerDecision" isMarkerVisible="true">
+        <ns2:Bounds x="230" y="690" width="50" height="50" />
+        <ns1:BPMNLabel>
+          <ns2:Bounds x="65" y="696" width="155" height="30" />
+        </ns1:BPMNLabel>
+      </ns1:BPMNShape>
+      <ns1:BPMNShape id="ReceiveCash_di" bpmnElement="ReceiveCash">
+        <ns2:Bounds x="145" y="760" width="220" height="90" />
+      </ns1:BPMNShape>
+      <ns1:BPMNShape id="CancelDraft_di" bpmnElement="CancelDraft">
+        <ns2:Bounds x="565" y="760" width="220" height="90" />
+      </ns1:BPMNShape>
+      <ns1:BPMNShape id="Commit_di" bpmnElement="Commit">
+        <ns2:Bounds x="565" y="900" width="220" height="100" />
+      </ns1:BPMNShape>
+      <ns1:BPMNShape id="Available_di" bpmnElement="Available" isMarkerVisible="true">
+        <ns2:Bounds x="650" y="1050" width="50" height="50" />
+        <ns1:BPMNLabel>
+          <ns2:Bounds x="555" y="1014" width="235" height="28" />
+        </ns1:BPMNLabel>
+      </ns1:BPMNShape>
+      <ns1:BPMNShape id="InputError_di" bpmnElement="InputError">
+        <ns2:Bounds x="565" y="540" width="220" height="90" />
+      </ns1:BPMNShape>
+      <ns1:BPMNShape id="StockError_di" bpmnElement="StockError">
+        <ns2:Bounds x="565" y="1150" width="220" height="90" />
+      </ns1:BPMNShape>
+      <ns1:BPMNShape id="Refund_di" bpmnElement="Refund">
+        <ns2:Bounds x="145" y="1280" width="220" height="80" />
+      </ns1:BPMNShape>
+      <ns1:BPMNShape id="EndInput_di" bpmnElement="EndInput">
+        <ns2:Bounds x="657" y="680" width="36" height="36" />
+        <ns1:BPMNLabel>
+          <ns2:Bounds x="600" y="720" width="150" height="28" />
+        </ns1:BPMNLabel>
+      </ns1:BPMNShape>
+      <ns1:BPMNShape id="EndCancelled_di" bpmnElement="EndCancelled">
+        <ns2:Bounds x="850" y="865" width="36" height="36" />
+        <ns1:BPMNLabel>
+          <ns2:Bounds x="800" y="906" width="135" height="28" />
+        </ns1:BPMNLabel>
+      </ns1:BPMNShape>
+      <ns1:BPMNShape id="EndPaid_di" bpmnElement="EndPaid">
+        <ns2:Bounds x="850" y="1057" width="36" height="36" />
+        <ns1:BPMNLabel>
+          <ns2:Bounds x="810" y="1097" width="150" height="28" />
+        </ns1:BPMNLabel>
+      </ns1:BPMNShape>
+      <ns1:BPMNShape id="EndRetry_di" bpmnElement="EndRetry">
+        <ns2:Bounds x="850" y="1400" width="36" height="36" />
+        <ns1:BPMNLabel>
+          <ns2:Bounds x="800" y="1440" width="150" height="28" />
+        </ns1:BPMNLabel>
+      </ns1:BPMNShape>
+      <ns1:BPMNEdge id="f1_di" bpmnElement="f1">
+        <ns3:waypoint x="255" y="156" />
+        <ns3:waypoint x="255" y="180" />
+        <ns3:waypoint x="255" y="210" />
+      </ns1:BPMNEdge>
+      <ns1:BPMNEdge id="f2_di" bpmnElement="f2">
+        <ns3:waypoint x="255" y="300" />
+        <ns3:waypoint x="255" y="310" />
+        <ns3:waypoint x="675" y="310" />
+        <ns3:waypoint x="675" y="320" />
+      </ns1:BPMNEdge>
+      <ns1:BPMNEdge id="f3_di" bpmnElement="f3">
+        <ns3:waypoint x="675" y="410" />
+        <ns3:waypoint x="675" y="450" />
+      </ns1:BPMNEdge>
+      <ns1:BPMNEdge id="f4_di" bpmnElement="f4">
+        <ns3:waypoint x="700" y="475" />
+        <ns3:waypoint x="430" y="475" />
+        <ns3:waypoint x="430" y="585" />
+        <ns3:waypoint x="365" y="585" />
+      </ns1:BPMNEdge>
+      <ns1:BPMNEdge id="f5_di" bpmnElement="f5">
+        <ns3:waypoint x="675" y="500" />
+        <ns3:waypoint x="675" y="540" />
+      </ns1:BPMNEdge>
+      <ns1:BPMNEdge id="f6_di" bpmnElement="f6">
+        <ns3:waypoint x="675" y="630" />
+        <ns3:waypoint x="675" y="680" />
+      </ns1:BPMNEdge>
+      <ns1:BPMNEdge id="f7_di" bpmnElement="f7">
+        <ns3:waypoint x="255" y="630" />
+        <ns3:waypoint x="255" y="690" />
+      </ns1:BPMNEdge>
+      <ns1:BPMNEdge id="f8_di" bpmnElement="f8">
+        <ns3:waypoint x="255" y="740" />
+        <ns3:waypoint x="255" y="760" />
+      </ns1:BPMNEdge>
+      <ns1:BPMNEdge id="f9_di" bpmnElement="f9">
+        <ns3:waypoint x="280" y="715" />
+        <ns3:waypoint x="400" y="715" />
+        <ns3:waypoint x="400" y="760" />
+        <ns3:waypoint x="675" y="760" />
+      </ns1:BPMNEdge>
+      <ns1:BPMNEdge id="f10_di" bpmnElement="f10">
+        <ns3:waypoint x="675" y="850" />
+        <ns3:waypoint x="675" y="883" />
+        <ns3:waypoint x="850" y="883" />
+      </ns1:BPMNEdge>
+      <ns1:BPMNEdge id="f11_di" bpmnElement="f11">
+        <ns3:waypoint x="255" y="850" />
+        <ns3:waypoint x="255" y="885" />
+        <ns3:waypoint x="675" y="885" />
+        <ns3:waypoint x="675" y="900" />
+      </ns1:BPMNEdge>
+      <ns1:BPMNEdge id="f12_di" bpmnElement="f12">
+        <ns3:waypoint x="675" y="1000" />
+        <ns3:waypoint x="675" y="1050" />
+      </ns1:BPMNEdge>
+      <ns1:BPMNEdge id="f13_di" bpmnElement="f13">
+        <ns3:waypoint x="700" y="1075" />
+        <ns3:waypoint x="850" y="1075" />
+      </ns1:BPMNEdge>
+      <ns1:BPMNEdge id="f14_di" bpmnElement="f14">
+        <ns3:waypoint x="675" y="1100" />
+        <ns3:waypoint x="675" y="1150" />
+      </ns1:BPMNEdge>
+      <ns1:BPMNEdge id="f15_di" bpmnElement="f15">
+        <ns3:waypoint x="675" y="1240" />
+        <ns3:waypoint x="675" y="1260" />
+        <ns3:waypoint x="400" y="1260" />
+        <ns3:waypoint x="400" y="1320" />
+        <ns3:waypoint x="365" y="1320" />
+      </ns1:BPMNEdge>
+      <ns1:BPMNEdge id="f16_di" bpmnElement="f16">
+        <ns3:waypoint x="255" y="1360" />
+        <ns3:waypoint x="255" y="1380" />
+        <ns3:waypoint x="868" y="1380" />
+        <ns3:waypoint x="868" y="1400" />
+      </ns1:BPMNEdge>
+    </ns1:BPMNPlane>
+  </ns1:BPMNDiagram>
+</bpmn:definitions>

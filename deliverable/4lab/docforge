@@ -1,0 +1,208 @@
+#!/usr/bin/env bash
+# ЛР №4, вариант 12. Requires GNU findutils, coreutils and awk; Bash >= 4.4.
+set -Eeuo pipefail
+export LC_ALL=C.UTF-8
+script_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)
+root=''; force=0; dry_run=0; temp_dir=''; scan_file=''
+usage() {
+  cat <<'EOF'
+docforge --root DIRECTORY [--force] [--dry-run] COMMAND [ARGS...]
+Генерация и обработка текстовых документов — ЛР №4, вариант 12.
+
+Команды (пути относительно --root):
+  create FILE TEXT           Создать документ UTF-8 с текстом и переводом строки.
+  list [EXT]                 Найти файлы; при EXT отфильтровать по расширению.
+  merge OUTPUT EXT           Объединить файлы EXT в порядке sort -z.
+  replace FILE OLD NEW       Заменить все буквальные вхождения OLD на NEW.
+  rename FILE NEW_BASENAME   Переименовать файл в том же каталоге.
+  extension OLD_EXT NEW_EXT  Изменить расширения всех подходящих файлов.
+  delete FILE               Переместить файл в .docforge-trash; вывести ID.
+  restore ID DESTINATION    Восстановить файл по ID корзины.
+
+Параметры:
+  --root DIRECTORY          Существующий рабочий каталог (обязателен).
+  --force                   Разрешить замену результата create/merge.
+  --dry-run                 Проверить операцию и показать действия без записи.
+  --help, -h                Показать эту справку.
+  --version                 Версия утилиты.
+
+Не следовать символическим ссылкам. Не выходить за --root.
+Удаление обратимо. Каталоги .docforge-trash и .docforge-tmp зарезервированы.
+Коды завершения: 0 успех, 1 ошибка выполнения, 2 ошибка аргументов/ограничений.
+EOF
+}
+msg() { printf '%s\n' "$*" >&2; }
+die() { msg "$1"; exit "${2:-2}"; }
+cleanup() {
+  [[ -z "$scan_file" ]] || rm -f -- "$scan_file"
+  if [[ -n "$temp_dir" && -d "$temp_dir" && "$temp_dir" == "$root/.docforge-tmp/"* ]]; then
+    rm -rf -- "$temp_dir"
+  fi
+}
+trap cleanup EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
+trap 'msg "Ошибка выполнения в строке $LINENO"' ERR
+while (($#)); do
+  case "$1" in
+    --help|-h) usage; exit 0;;
+    --version) printf 'docforge 1.0.0\n'; exit 0;;
+    --root) [[ $# -ge 2 && -n "$2" ]] || die 'Нужен путь после --root'; root=$2; shift 2;;
+    --force) force=1; shift;;
+    --dry-run) dry_run=1; shift;;
+    --*) die "Неизвестный параметр: $1";;
+    *) break;;
+  esac
+done
+[[ -n "$root" && -d "$root" ]] || die '--root должен указывать существующий каталог'
+for cmd in find realpath sort awk mktemp cat mv stat; do command -v "$cmd" >/dev/null || die "Не найден $cmd" 1; done
+root=$(realpath -e -- "$root")
+[[ "$root" != / ]] || die 'Нельзя использовать корень файловой системы'
+[[ $# -gt 0 ]] || die 'Не указана команда'
+operation=$1; shift
+for reserved in .docforge-trash .docforge-tmp; do
+  [[ ! -L "$root/$reserved" ]] || die "Зарезервированный путь $reserved является ссылкой"
+  [[ ! -e "$root/$reserved" || -d "$root/$reserved" ]] || die "Зарезервированный путь $reserved занят файлом"
+done
+safe_path() {
+  local input=$1 resolved part current
+  [[ -n "$input" && "$input" != /* ]] || die 'Нужен относительный путь внутри --root'
+  [[ "$input" != *$'\n'* && "$input" != *$'\r'* ]] || die 'Переводы строк в пути не поддерживаются'
+  [[ "$input" != .docforge-* && "$input" != */.docforge-* ]] || die 'Зарезервированный путь'
+  # Reject every symlink component, even when its target currently remains in root.
+  current=$root
+  local -a components
+  IFS=/ read -r -a components <<< "$input"
+  for part in "${components[@]}"; do
+    [[ "$part" != '..' ]] || die 'Компоненты .. не допускаются'
+    current="$current/$part"
+    [[ ! -L "$current" ]] || die 'Символические ссылки не допускаются'
+  done
+  resolved=$(realpath -m -- "$root/$input")
+  [[ "$resolved" == "$root/"* && "$resolved" != "$root" ]] || die 'Путь вне рабочего каталога'
+  [[ -d "$(dirname -- "$resolved")" ]] || die 'Родительский каталог должен существовать'
+  printf '%s' "$resolved"
+}
+regular_file() { [[ -f "$1" && ! -L "$1" ]] || die 'Нужен существующий обычный файл'; }
+validate_ext() { [[ "$1" =~ ^[A-Za-z0-9]{1,12}$ ]] || die 'Расширение: 1–12 букв/цифр без точки'; }
+check_output() {
+  [[ ! -d "$1" ]] || die 'Результат не может быть каталогом'
+  [[ ! -e "$1" || $force -eq 1 ]] || die 'Файл уже существует; для create/merge используйте --force'
+}
+prepare_temp() {
+  umask 077
+  mkdir -p -- "$root/.docforge-tmp"
+  temp_dir=$(mktemp -d "$root/.docforge-tmp/run.XXXXXXXX")
+}
+scan() {
+  local pattern='*'
+  [[ $# -eq 0 ]] || pattern="*.${1}"
+  find "$root" -type d \( -name .docforge-trash -o -name .docforge-tmp \) -prune -o \
+    -type f -name "$pattern" -print0 | sort -z
+}
+scan_checked() {
+  # Process substitution hides find/sort exit status. Finish scanning first.
+  scan_file=$(mktemp)
+  if ! scan "$@" > "$scan_file"; then
+    die 'Не удалось прочитать весь каталог; операция отменена' 1
+  fi
+}
+check_text() {
+  # Text-only transformations must not silently corrupt binary files.
+  [[ $(LC_ALL=C tr -cd '\000' < "$1" | wc -c) -eq 0 ]] || die 'Файл содержит NUL и не является текстовым'
+}
+commit_output() {
+  local dest=$1
+  if [[ -e "$dest" ]]; then chmod --reference="$dest" "$temp_dir/output"; fi
+  mv -f -- "$temp_dir/output" "$dest"
+}
+case "$operation" in
+  create)
+    [[ $# -eq 2 ]] || die 'create FILE TEXT'
+    target=$(safe_path "$1"); check_output "$target"
+    if ((dry_run)); then msg "Создать: $target"; exit 0; fi
+    prepare_temp; printf '%s\n' "$2" > "$temp_dir/output"; commit_output "$target"; msg "Создан: $1"
+    ;;
+  list)
+    [[ $# -le 1 ]] || die 'list [EXT]'
+    [[ $# -eq 0 ]] || validate_ext "$1"
+    scan_checked "$@"
+    while IFS= read -r -d '' file; do printf '%s\n' "${file#"$root/"}"; done < "$scan_file"
+    ;;
+  merge)
+    [[ $# -eq 2 ]] || die 'merge OUTPUT EXT'
+    target=$(safe_path "$1"); validate_ext "$2"; check_output "$target"
+    scan_checked "$2"
+    files=()
+    while IFS= read -r -d '' file; do
+      [[ "$file" == "$target" ]] && continue
+      check_text "$file"; files+=("$file")
+    done < "$scan_file"
+    ((${#files[@]})) || die 'Не найдены входные документы'
+    if ((dry_run)); then printf 'Объединить %s файлов в %s\n' "${#files[@]}" "$target" >&2; exit 0; fi
+    prepare_temp; : > "$temp_dir/output"
+    for file in "${files[@]}"; do
+      printf '\n--- %s ---\n' "${file#"$root/"}" >> "$temp_dir/output"
+      cat -- "$file" >> "$temp_dir/output"; printf '\n' >> "$temp_dir/output"
+    done
+    commit_output "$target"; msg "Объединено документов: ${#files[@]}"
+    ;;
+  replace)
+    [[ $# -eq 3 && -n "$2" ]] || die 'replace FILE OLD NEW; OLD не должен быть пустым'
+    [[ "$2$3" != *$'\n'* && "$2$3" != *$'\r'* ]] || die 'OLD/NEW должны быть однострочными'
+    target=$(safe_path "$1"); regular_file "$target"; check_text "$target"
+    if ((dry_run)); then msg "Заменить текст в: $target"; exit 0; fi
+    prepare_temp
+    DOCFORGE_OLD=$2 DOCFORGE_NEW=$3 awk '
+      BEGIN { old=ENVIRON["DOCFORGE_OLD"]; new=ENVIRON["DOCFORGE_NEW"] }
+      { rest=$0; output=""; while ((p=index(rest,old))>0) {
+          output=output substr(rest,1,p-1) new; rest=substr(rest,p+length(old))
+        }; print output rest
+      }' "$target" > "$temp_dir/output"
+    commit_output "$target"; msg "Текст изменён: $1"
+    ;;
+  rename)
+    [[ $# -eq 2 && -n "$2" && "$2" != */* && "$2" != . && "$2" != .. ]] || die 'rename FILE NEW_BASENAME'
+    source=$(safe_path "$1"); regular_file "$source"
+    relative_dir=$(dirname -- "$1"); target=$(safe_path "$relative_dir/$2")
+    [[ ! -e "$target" ]] || die 'Целевое имя уже существует'
+    if ((dry_run)); then msg "$source -> $target"; else mv -- "$source" "$target"; msg 'Файл переименован'; fi
+    ;;
+  extension)
+    [[ $# -eq 2 ]] || die 'extension OLD_EXT NEW_EXT'
+    validate_ext "$1"; validate_ext "$2"; [[ "$1" != "$2" ]] || die 'Расширения должны различаться'
+    scan_checked "$1"
+    sources=(); targets=()
+    while IFS= read -r -d '' source; do
+      safe_path "${source#"$root/"}" >/dev/null
+      target="${source%.*}.$2"
+      [[ ! -e "$target" && ! -L "$target" ]] || die "Коллизия имени: $target"
+      sources+=("$source"); targets+=("$target")
+    done < "$scan_file"
+    for i in "${!sources[@]}"; do
+      if ((dry_run)); then msg "${sources[i]} -> ${targets[i]}"
+      else mv -- "${sources[i]}" "${targets[i]}"; fi
+    done
+    msg "Обработано файлов: ${#sources[@]}"
+    ;;
+  delete)
+    [[ $# -eq 1 ]] || die 'delete FILE'
+    source=$(safe_path "$1"); regular_file "$source"
+    if ((dry_run)); then msg "Переместить в корзину: $source"; exit 0; fi
+    umask 077; mkdir -p -- "$root/.docforge-trash"
+    trash_dir=$(mktemp -d "$root/.docforge-trash/item.XXXXXXXX")
+    printf '%s\n' "$1" > "$trash_dir/original-path"
+    mv -- "$source" "$trash_dir/document"
+    printf '%s\n' "${trash_dir##*/}"
+    ;;
+  restore)
+    [[ $# -eq 2 && "$1" =~ ^item\.[A-Za-z0-9]+$ ]] || die 'restore ID DESTINATION'
+    trash_dir="$root/.docforge-trash/$1"
+    [[ ! -L "$trash_dir" && ! -L "$trash_dir/document" ]] || die 'Ссылка в корзине'
+    source="$trash_dir/document"; regular_file "$source"
+    target=$(safe_path "$2"); [[ ! -e "$target" ]] || die 'Целевой файл существует'
+    if ((dry_run)); then msg "Восстановить: $target"; exit 0; fi
+    mv -- "$source" "$target"; msg "Восстановлен: $2"
+    ;;
+  *) die "Неизвестная команда: $operation";;
+esac

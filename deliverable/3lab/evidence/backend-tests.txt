@@ -1,0 +1,7 @@
+2026-09-12 verification after backend modularization
+Windows PostgreSQL 17.5, dedicated supermarket_test on 127.0.0.1:25436
+8 unittest integration tests: auth, concurrency, money, pagination, permissions,
+repeat_and_snapshot, transitions, validation
+Ran 8 tests in 15.871s
+OK; skipped=0
+API/admin connections were checked against the same test database before mutation.

@@ -1,0 +1,61 @@
+name: supermarket-lab3
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: supermarket
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Run setup.sh}
+      APP_DB_PASSWORD: ${APP_DB_PASSWORD:?Run setup.sh}
+      ADMIN_DB_PASSWORD: ${ADMIN_DB_PASSWORD:?Run setup.sh}
+      POSTGRES_INITDB_ARGS: --auth-host=scram-sha-256
+    volumes:
+      - db_data:/var/lib/postgresql/data
+      - ./db/10-init.sh:/docker-entrypoint-initdb.d/10-init.sh:ro
+      - ./init.sql:/opt/supermarket/init.sql:ro
+      - ./db/pg_hba.conf:/etc/postgresql/pg_hba.conf:ro
+    command: ["postgres", "-c", "hba_file=/etc/postgresql/pg_hba.conf", "-c", "password_encryption=scram-sha-256"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d supermarket"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+  bootstrap:
+    build: ./backend
+    environment:
+      DB_HOST: db
+      DB_NAME: supermarket
+      DB_USER: market_admin
+      DB_PASSWORD: ${ADMIN_DB_PASSWORD:?Run setup.sh}
+      MANAGER_PASSWORD: ${MANAGER_PASSWORD:?Run setup.sh}
+      CASHIER_PASSWORD: ${CASHIER_PASSWORD:?Run setup.sh}
+      AUDITOR_PASSWORD: ${AUDITOR_PASSWORD:?Run setup.sh}
+    command: ["python", "-m", "app.seed"]
+    depends_on:
+      db: {condition: service_healthy}
+    restart: "no"
+  api:
+    build: ./backend
+    environment:
+      DB_HOST: db
+      DB_NAME: supermarket
+      DB_USER: market_app
+      DB_PASSWORD: ${APP_DB_PASSWORD:?Run setup.sh}
+    depends_on:
+      bootstrap: {condition: service_completed_successfully}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health')"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+  nginx:
+    build:
+      context: ./frontend
+    ports: ["127.0.0.1:${HTTP_PORT:-8083}:80"]
+    depends_on:
+      api: {condition: service_healthy}
+    restart: unless-stopped
+volumes:
+  db_data:

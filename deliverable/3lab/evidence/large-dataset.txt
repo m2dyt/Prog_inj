@@ -1,0 +1,29 @@
+DO
+SET
+BEGIN
+INSERT 0 100000
+INSERT 0 100000
+INSERT 0 500000
+INSERT 0 100000
+COMMIT
+ANALYZE
+ANALYZE
+ANALYZE
+ANALYZE
+    object     | count  
+---------------+--------
+ products      | 100022
+ receipts      | 100005
+ receipt_items | 500006
+(3 rows)
+
+     relname     | total_size 
+-----------------+------------
+ app_users       | 48 kB
+ products        | 31 MB
+ receipt_items   | 99 MB
+ receipts        | 30 MB
+ sessions        | 56 kB
+ stock_movements | 20 MB
+(6 rows)
+

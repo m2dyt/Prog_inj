@@ -1,0 +1,7 @@
+    object     | count  
+---------------+--------
+ products      | 100034
+ receipts      | 100013
+ receipt_items | 500014
+(3 rows)
+

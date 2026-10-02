@@ -1,0 +1,16 @@
+Создан: первый файл.txt
+Создан: second.txt
+Текст изменён: первый файл.txt
+Объединено документов: 2
+Объединено документов: 2
+/tmp/tmp.Fz3rXqWdFf/root/all.txt -> /tmp/tmp.Fz3rXqWdFf/root/all.md
+/tmp/tmp.Fz3rXqWdFf/root/second.txt -> /tmp/tmp.Fz3rXqWdFf/root/second.md
+/tmp/tmp.Fz3rXqWdFf/root/первый файл.txt -> /tmp/tmp.Fz3rXqWdFf/root/первый файл.md
+Обработано файлов: 3
+Создан: second.md
+Восстановлен: restored.md
+Файл переименован
+SKIP: среда эмулирует symlink копированием; повторить тест на Linux
+Обработано файлов: 3
+Переместить в корзину: /tmp/tmp.Fz3rXqWdFf/root/new.md
+PASS: создание, поиск, merge, буквальная замена, rename, extension, dry-run, корзина, восстановление, ограничения путей и бинарных файлов
