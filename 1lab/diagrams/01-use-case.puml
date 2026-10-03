@@ -2,45 +2,48 @@
 left to right direction
 skinparam defaultFontName Arial
 skinparam shadowing false
-actor "Кассир" as Cashier
-actor "Менеджер" as Manager
-actor "Аудитор" as Auditor
-actor "Администратор БД" as DBA
-rectangle "ИС супермаркета · вариант 36" {
-  usecase "UC01\nВойти / завершить сеанс" as Login
-  usecase "UC02\nНайти и просмотреть товар" as Browse
-  usecase "UC03\nСоздать / изменить /\nархивировать карточку" as Manage
-  usecase "UC04\nСкорректировать остаток" as Stock
-  usecase "UC05\nСформировать черновик" as Draft
-  usecase "UC06\nПодтвердить оплату" as Pay
-  usecase "UC07\nОтменить черновик" as Cancel
-  usecase "UC08\nПросмотреть чеки" as History
-  usecase "Проверить остатки" as Check
-  usecase "Зафиксировать движения" as Movement
-  usecase "UC09\nАдминистрировать БД" as Admin
+skinparam linetype ortho
+skinparam nodesep 34
+skinparam ranksep 40
+skinparam packageStyle rectangle
+skinparam usecase {
+  BackgroundColor #F7FAFC
+  BorderColor #526579
 }
-Cashier --> Login
-Cashier --> Browse
-Cashier --> Draft
-Cashier --> Pay
-Cashier --> Cancel
-Cashier --> History
-Manager --> Login
-Manager --> Browse
-Manager --> Manage
-Manager --> Stock
-Manager --> Draft
-Manager --> Pay
-Manager --> Cancel
-Manager --> History
-Auditor --> Login
-Auditor --> Browse
-Auditor --> History
-DBA --> Admin
-Pay .> Check : <<include>>
-Pay .> Movement : <<include>>
-note bottom of History
-Кассир — собственные чеки.
-Менеджер и аудитор — все чеки.
-end note
+
+actor "Сотрудник\n(кассир, менеджер, аудитор)" as Staff
+actor "Администратор БД" as DBA
+
+rectangle "Информационная система супермаркета · вариант 36" {
+  package "Общие функции" {
+    usecase "UC01\nВойти / завершить сеанс" as Login
+    usecase "UC02\nНайти и просмотреть товар" as Browse
+  }
+
+  package "Продажа" {
+    usecase "UC05–UC07\nОформить продажу:\nчерновик, оплата\nили отмена\n(кассир / менеджер)" as Sale
+  }
+
+  package "Управление товаром" {
+    usecase "UC03\nСоздать / изменить / архивировать\n(менеджер)" as Manage
+    usecase "UC04\nСкорректировать остаток\n(менеджер)" as Stock
+  }
+
+  package "Контроль" {
+    usecase "UC08\nПросмотреть чеки:\nсвои для кассира; все\nдля менеджера и аудитора" as History
+  }
+
+  package "Эксплуатация" {
+    usecase "UC09\nОбслуживать БД\n(вне Web-интерфейса)" as Admin
+  }
+}
+
+Staff -- Login
+Staff -- Browse
+Staff -- Sale
+Staff -- Manage
+Staff -- Stock
+Staff -- History
+DBA -- Admin
+
 @enduml
