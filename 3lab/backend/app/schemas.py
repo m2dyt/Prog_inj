@@ -7,6 +7,7 @@ from pydantic import BaseModel, ConfigDict, Field, StrictBool, StrictInt, field_
 
 Id = Annotated[StrictInt, Field(gt=0, le=9007199254740991)]
 Money = Annotated[Decimal, Field(gt=0, le=Decimal('999999.99'), max_digits=8, decimal_places=2, allow_inf_nan=False)]
+CashAmount = Annotated[Decimal, Field(gt=0, le=Decimal('999999999999.99'), max_digits=14, decimal_places=2, allow_inf_nan=False)]
 
 
 class Input(BaseModel):
@@ -76,6 +77,23 @@ class ReceiptCreate(Input):
         return self
 
 
+class ReceiptPayment(Input):
+    payment_method: Literal['cash', 'card_simulated']
+    cash_received: CashAmount | None = None
+    card_outcome: Literal['approved', 'declined'] | None = None
+
+    @model_validator(mode='after')
+    def payment_fields_match_method(self):
+        if self.payment_method == 'cash':
+            if self.cash_received is None:
+                raise ValueError('Для оплаты наличными укажите полученную сумму')
+            if self.card_outcome is not None:
+                raise ValueError('Результат терминала используется только для симуляции карты')
+        elif self.cash_received is not None:
+            raise ValueError('Для симуляции карты сумма наличных не указывается')
+        return self
+
+
 class ProductOut(BaseModel):
     id: int
     barcode: str
@@ -130,5 +148,8 @@ class ReceiptOut(BaseModel):
     status: Literal['draft', 'paid', 'cancelled']
     created_at: datetime
     paid_at: datetime | None
+    payment_method: Literal['cash', 'card_simulated'] | None
+    cash_received: Decimal | None
+    change_due: Decimal | None
     total: Decimal
     items: list[LineOut]

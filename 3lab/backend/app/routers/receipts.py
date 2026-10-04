@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, Query, Request
 
 from ..db import connection
 from ..dependencies import SafeId, current_user, permit
-from ..schemas import ReceiptCreate, ReceiptOut
+from ..schemas import ReceiptCreate, ReceiptOut, ReceiptPayment
 from ..services import receipts
 
 router = APIRouter(prefix="/api/receipts", tags=["receipts"])
@@ -38,11 +38,12 @@ def get_receipt(receipt_id: SafeId, request: Request, user=Depends(current_user)
 @router.post("/{receipt_id}/pay", response_model=ReceiptOut)
 def pay_receipt(
     receipt_id: SafeId,
+    body: ReceiptPayment,
     request: Request,
     user=Depends(permit("cashier", "manager")),
 ):
     with connection(request) as conn:
-        return receipts.pay(conn, receipt_id, user)
+        return receipts.pay(conn, receipt_id, user, body)
 
 
 @router.post("/{receipt_id}/cancel", response_model=ReceiptOut)

@@ -4,6 +4,7 @@ import { ReceiptText } from "lucide-react";
 import { currency } from "../../api";
 
 const statusNames = { draft: "Черновик", paid: "Оплачен", cancelled: "Отменён" };
+const paymentNames = { cash: "Наличные", card_simulated: "Карта (симуляция)" };
 
 export default function ReceiptHistory({
   userRole,
@@ -48,6 +49,17 @@ export default function ReceiptHistory({
             </p>
           ))}
           <p>Итого<strong>{currency(selected.total)}</strong></p>
+          {selected.status === "paid" && selected.payment_method && (
+            <>
+              <p>Способ оплаты<strong>{paymentNames[selected.payment_method]}</strong></p>
+              {selected.payment_method === "cash" && (
+                <>
+                  <p>Получено наличными<strong>{currency(selected.cash_received)}</strong></p>
+                  <p>Сдача<strong>{currency(selected.change_due)}</strong></p>
+                </>
+              )}
+            </>
+          )}
           {selected.status === "draft" && saleAllowed && (
             <button className="button primary" disabled={!canContinue} onClick={onContinue}>
               Продолжить продажу
@@ -74,6 +86,9 @@ ReceiptHistory.propTypes = {
     id: PropTypes.number.isRequired,
     status: PropTypes.string.isRequired,
     total: PropTypes.oneOfType([PropTypes.number, PropTypes.string]).isRequired,
+    payment_method: PropTypes.oneOf(["cash", "card_simulated"]),
+    cash_received: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
+    change_due: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
     items: PropTypes.arrayOf(PropTypes.shape({
       product_id: PropTypes.number.isRequired,
       product_name: PropTypes.string.isRequired,

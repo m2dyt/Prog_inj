@@ -93,9 +93,11 @@ def test_idempotency_and_price_snapshot(client,tokens):
     assert receipt(client,tokens,p,3,key).status_code==409
     body={k:p[k] for k in ['barcode','name','category','price','version','active']}; body['price']='29.90'
     assert client.put(f'/api/products/{p["id"]}',json=body,headers=tokens['manager']).status_code==200
-    paid=client.post(f'/api/receipts/{r["id"]}/pay',headers=tokens['cashier']); assert paid.status_code==200,paid.text
+    paid=client.post(f'/api/receipts/{r["id"]}/pay',json={'payment_method':'cash','cash_received':'50.00'},headers=tokens['cashier']); assert paid.status_code==200,paid.text
     assert paid.json()['total']=='39.80'
-    assert client.post(f'/api/receipts/{r["id"]}/pay',headers=tokens['cashier']).status_code==200
+    assert paid.json()['payment_method']=='cash' and paid.json()['change_due']=='10.20'
+    replay=client.post(f'/api/receipts/{r["id"]}/pay',json={'payment_method':'card_simulated'},headers=tokens['cashier'])
+    assert replay.status_code==200 and replay.json()['change_due']=='10.20'
     assert client.post(f'/api/receipts/{r["id"]}/cancel',headers=tokens['cashier']).status_code==409
     with psycopg.connect(os.environ['TEST_ADMIN_URL']) as conn:
         assert conn.execute('SELECT stock FROM market.products WHERE id=%s',(p['id'],)).fetchone()[0]==3
@@ -105,7 +107,7 @@ def test_idempotency_and_price_snapshot(client,tokens):
 def test_competing_sales_do_not_oversell(client,tokens):
     p=product(client,tokens,stock=1)
     ids=[receipt(client,tokens,p).json()['id'] for _ in range(2)]
-    def pay(i): return client.post(f'/api/receipts/{i}/pay',headers=tokens['cashier']).status_code
+    def pay(i): return client.post(f'/api/receipts/{i}/pay',json={'payment_method':'card_simulated'},headers=tokens['cashier']).status_code
     with ThreadPoolExecutor(max_workers=2) as pool:
         assert sorted(pool.map(pay,ids))==[200,409]
     with psycopg.connect(os.environ['TEST_ADMIN_URL']) as conn:
@@ -116,7 +118,7 @@ def test_cancel_version_and_archive(client,tokens):
     p=product(client,tokens); r=receipt(client,tokens,p).json()
     assert client.post(f'/api/receipts/{r["id"]}/cancel',headers=tokens['cashier']).status_code==200
     assert client.post(f'/api/receipts/{r["id"]}/cancel',headers=tokens['cashier']).status_code==200
-    assert client.post(f'/api/receipts/{r["id"]}/pay',headers=tokens['cashier']).status_code==409
+    assert client.post(f'/api/receipts/{r["id"]}/pay',json={'payment_method':'cash','cash_received':'19.90'},headers=tokens['cashier']).status_code==409
     body={k:p[k] for k in ['barcode','name','category','price','version','active']}; body['active']=False
     assert client.put(f'/api/products/{p["id"]}',json=body,headers=tokens['manager']).status_code==200
     assert client.put(f'/api/products/{p["id"]}',json=body,headers=tokens['manager']).status_code==409
@@ -166,6 +168,49 @@ def test_database_role_cannot_write_ddl_or_delete_history(client):
                 with conn.transaction(): conn.execute(sql)
 
 
+def test_cash_payment(client,tokens):
+    p=product(client,tokens,stock=2); r=receipt(client,tokens,p).json()
+    url=f'/api/receipts/{r["id"]}/pay'
+    short=client.post(url,json={'payment_method':'cash','cash_received':'19.89'},headers=tokens['cashier'])
+    assert short.status_code==422,short.text
+    assert 'Не хватает 0.01' in short.json()['detail']
+    with psycopg.connect(os.environ['TEST_ADMIN_URL']) as conn:
+        assert conn.execute('SELECT status FROM market.receipts WHERE id=%s',(r['id'],)).fetchone()[0]=='draft'
+        assert conn.execute('SELECT stock FROM market.products WHERE id=%s',(p['id'],)).fetchone()[0]==2
+        assert conn.execute('SELECT count(*) FROM market.stock_movements WHERE receipt_id=%s',(r['id'],)).fetchone()[0]==0
+    paid=client.post(url,json={'payment_method':'cash','cash_received':'50.00'},headers=tokens['cashier'])
+    assert paid.status_code==200,paid.text
+    assert paid.json()['cash_received']=='50.00' and paid.json()['change_due']=='30.10'
+    assert client.post(url,json={'payment_method':'cash'},headers=tokens['cashier']).status_code==422
+    assert client.post(url,json={'payment_method':'cash','cash_received':'50.00','total':'19.90'},headers=tokens['cashier']).status_code==422
+    with psycopg.connect(os.environ['TEST_ADMIN_URL']) as conn:
+        assert conn.execute('SELECT stock FROM market.products WHERE id=%s',(p['id'],)).fetchone()[0]==1
+        assert conn.execute('SELECT count(*) FROM market.stock_movements WHERE receipt_id=%s',(r['id'],)).fetchone()[0]==1
+
+
+def test_card_payment(client,tokens):
+    p=product(client,tokens,stock=2); r=receipt(client,tokens,p).json()
+    url=f'/api/receipts/{r["id"]}/pay'
+    mismatch=client.post(url,json={'payment_method':'card_simulated','cash_received':'50.00'},headers=tokens['cashier'])
+    assert mismatch.status_code==422
+    declined=client.post(url,json={'payment_method':'card_simulated','card_outcome':'declined'},headers=tokens['cashier'])
+    assert declined.status_code==402,declined.text
+    assert 'остался черновиком' in declined.json()['detail']
+    with psycopg.connect(os.environ['TEST_ADMIN_URL']) as conn:
+        assert conn.execute('SELECT status FROM market.receipts WHERE id=%s',(r['id'],)).fetchone()[0]=='draft'
+        assert conn.execute('SELECT stock FROM market.products WHERE id=%s',(p['id'],)).fetchone()[0]==2
+        assert conn.execute('SELECT count(*) FROM market.stock_movements WHERE receipt_id=%s',(r['id'],)).fetchone()[0]==0
+    paid=client.post(url,json={'payment_method':'card_simulated'},headers=tokens['cashier'])
+    assert paid.status_code==200,paid.text
+    assert paid.json()['payment_method']=='card_simulated'
+    assert paid.json()['cash_received'] is None and paid.json()['change_due'] is None
+    replay=client.post(url,json={'payment_method':'card_simulated'},headers=tokens['cashier'])
+    assert replay.status_code==200 and replay.json()['payment_method']=='card_simulated'
+    with psycopg.connect(os.environ['TEST_ADMIN_URL']) as conn:
+        assert conn.execute('SELECT stock FROM market.products WHERE id=%s',(p['id'],)).fetchone()[0]==1
+        assert conn.execute('SELECT count(*) FROM market.stock_movements WHERE receipt_id=%s',(r['id'],)).fetchone()[0]==1
+
+
 class APIIntegration(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -187,6 +232,8 @@ class APIIntegration(unittest.TestCase):
     def test_pagination(self): test_cursor_and_duplicate_barcode(self.client, self.auth)
     def test_product_details(self): test_product_details_and_server_validation(self.client, self.auth)
     def test_permissions(self): test_database_role_cannot_write_ddl_or_delete_history(self.client)
+    def test_cash_payment(self): test_cash_payment(self.client, self.auth)
+    def test_card_payment(self): test_card_payment(self.client, self.auth)
     def test_money(self):
         for price in ['-1','0','1.001','NaN','Infinity','1000000.00']:
             with self.subTest(price=price): test_invalid_money(self.client, self.auth, price)

@@ -1,9 +1,18 @@
+import { useEffect, useState } from "react";
 import PropTypes from "prop-types";
 import { ArrowUpRight, Minus, Plus, ShoppingBasket } from "lucide-react";
 
 import { cents, currency } from "../../api";
 
 export default function CartPanel({ cart, draft, busy, creating, locked, onChange, onPrepare, onFinish }) {
+  const [paymentMethod, setPaymentMethod] = useState("cash");
+  const [cashInput, setCashInput] = useState("");
+
+  useEffect(() => {
+    setPaymentMethod("cash");
+    setCashInput("");
+  }, [draft?.id]);
+
   const displayLines = draft
     ? draft.items.map((item) => ({
       id: item.product_id,
@@ -16,6 +25,12 @@ export default function CartPanel({ cart, draft, busy, creating, locked, onChang
   const total = draft
     ? draft.total
     : cart.reduce((sum, item) => sum + cents(item.price) * item.quantity, 0) / 100;
+  const normalizedCash = cashInput.trim().replace(",", ".");
+  const validCash = /^\d{1,12}(?:\.\d{1,2})?$/.test(normalizedCash) && Number(normalizedCash) > 0;
+  const cashCents = validCash ? Math.round(Number(normalizedCash) * 100) : null;
+  const totalCents = cents(total);
+  const cashShort = validCash && cashCents < totalCents;
+  const changeCents = validCash ? cashCents - totalCents : null;
 
   return (
     <aside className="cart">
@@ -58,10 +73,79 @@ export default function CartPanel({ cart, draft, busy, creating, locked, onChang
         <p><span>{draft ? "К оплате" : "Предварительный итог"}</span><strong>{currency(total)}</strong></p>
         {draft ? (
           <>
-            <p className="cart-hint">Подтвердите получение наличных. Остатки спишутся после подтверждения.</p>
-            <button className="button primary" disabled={busy} onClick={() => onFinish("pay")}>
-              {busy ? "Обработка…" : "Наличные получены"}
-            </button>
+            <fieldset className="payment-methods" disabled={busy}>
+              <legend>Способ оплаты</legend>
+              <label className={paymentMethod === "cash" ? "payment-option selected" : "payment-option"}>
+                <input
+                  type="radio"
+                  name={`payment-method-${draft.id}`}
+                  value="cash"
+                  checked={paymentMethod === "cash"}
+                  onChange={() => setPaymentMethod("cash")}
+                />
+                <span><strong>Наличные</strong><small>Внести полученную сумму и выдать сдачу</small></span>
+              </label>
+              <label className={paymentMethod === "card" ? "payment-option selected" : "payment-option"}>
+                <input
+                  type="radio"
+                  name={`payment-method-${draft.id}`}
+                  value="card"
+                  checked={paymentMethod === "card"}
+                  onChange={() => setPaymentMethod("card")}
+                />
+                <span><strong>Карта</strong><small>Учебная симуляция ответа терминала</small></span>
+              </label>
+            </fieldset>
+            {paymentMethod === "cash" ? (
+              <div className="cash-payment">
+                <label htmlFor={`cash-received-${draft.id}`}>Получено от покупателя</label>
+                <div className="cash-input-wrap">
+                  <input
+                    id={`cash-received-${draft.id}`}
+                    type="text"
+                    inputMode="decimal"
+                    autoComplete="off"
+                    placeholder="Например, 1000"
+                    value={cashInput}
+                    onChange={(event) => setCashInput(event.target.value)}
+                    aria-describedby={`cash-change-${draft.id}`}
+                  />
+                  <span>₽</span>
+                </div>
+                <p id={`cash-change-${draft.id}`} className={cashShort ? "cash-change insufficient" : "cash-change"} aria-live="polite">
+                  {!validCash
+                    ? "Введите сумму, полученную от покупателя."
+                    : cashShort
+                      ? `Не хватает ${currency((totalCents - cashCents) / 100)}`
+                      : `Сдача: ${currency(changeCents / 100)}`}
+                </p>
+                <button
+                  className="button primary"
+                  disabled={busy || !validCash || cashShort}
+                  onClick={() => onFinish("pay", { payment_method: "cash", cash_received: normalizedCash })}
+                >
+                  {busy ? "Обработка…" : "Принять наличные"}
+                </button>
+              </div>
+            ) : (
+              <div className="card-payment">
+                <p>Реального списания средств нет. Сервер сохраняет только результат учебной симуляции.</p>
+                <button
+                  className="button primary"
+                  disabled={busy}
+                  onClick={() => onFinish("pay", { payment_method: "card_simulated" })}
+                >
+                  {busy ? "Терминал обрабатывает…" : "Симулировать одобрение карты"}
+                </button>
+                <button
+                  className="button secondary"
+                  disabled={busy}
+                  onClick={() => onFinish("pay", { payment_method: "card_simulated", card_outcome: "declined" })}
+                >
+                  Показать отказ терминала
+                </button>
+              </div>
+            )}
             <button className="button secondary" disabled={busy} onClick={() => onFinish("cancel")}>Отменить чек</button>
           </>
         ) : (

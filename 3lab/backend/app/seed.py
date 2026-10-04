@@ -249,6 +249,51 @@ def ensure_product_detail_columns(conn):
     conn.execute('RESET ROLE')
 
 
+def ensure_receipt_payment_columns(conn):
+    """Add payment metadata to existing volumes without replacing receipt history."""
+    conn.execute('SET ROLE market_owner')
+    conn.execute('ALTER TABLE market.receipts ADD COLUMN IF NOT EXISTS payment_method varchar(20)')
+    conn.execute('ALTER TABLE market.receipts ADD COLUMN IF NOT EXISTS cash_received numeric(14,2)')
+    conn.execute('ALTER TABLE market.receipts ADD COLUMN IF NOT EXISTS change_due numeric(14,2)')
+    # Older paid receipts predate payment-method tracking; preserve them as exact-cash sales.
+    conn.execute('ALTER TABLE market.receipts DISABLE TRIGGER receipt_state_guard')
+    conn.execute('''UPDATE market.receipts AS r
+        SET payment_method='cash', cash_received=t.total, change_due=0
+        FROM (SELECT receipt_id, sum(line_total)::numeric(14,2) AS total
+              FROM market.receipt_items GROUP BY receipt_id) AS t
+        WHERE r.id=t.receipt_id AND r.status='paid' AND r.payment_method IS NULL''')
+    conn.execute('ALTER TABLE market.receipts ENABLE TRIGGER receipt_state_guard')
+    conn.execute('''DO $$ BEGIN
+        IF NOT EXISTS (
+            SELECT 1 FROM pg_constraint
+            WHERE conname='receipts_payment_metadata_check'
+              AND conrelid='market.receipts'::regclass
+        ) THEN
+            ALTER TABLE market.receipts ADD CONSTRAINT receipts_payment_metadata_check CHECK (
+                (status = 'paid' AND (
+                    (payment_method = 'cash' AND cash_received IS NOT NULL AND change_due IS NOT NULL)
+                    OR (payment_method = 'card_simulated' AND cash_received IS NULL AND change_due IS NULL)
+                ))
+                OR (status <> 'paid' AND payment_method IS NULL AND cash_received IS NULL AND change_due IS NULL)
+            );
+        END IF;
+    END $$''')
+    constraints = (
+        ('receipts_payment_method_check', "CHECK (payment_method IS NULL OR payment_method IN ('cash','card_simulated'))"),
+        ('receipts_cash_received_check', 'CHECK (cash_received IS NULL OR cash_received > 0)'),
+        ('receipts_change_due_check', 'CHECK (change_due IS NULL OR change_due >= 0)'),
+    )
+    for name, definition in constraints:
+        exists = conn.execute(
+            'SELECT 1 FROM pg_constraint WHERE conname=%s AND conrelid=%s::regclass',
+            (name, 'market.receipts'),
+        ).fetchone()
+        if not exists:
+            conn.execute(f'ALTER TABLE market.receipts ADD CONSTRAINT {name} {definition}')
+    conn.execute('GRANT UPDATE (status,paid_at,payment_method,cash_received,change_due) ON market.receipts TO market_app')
+    conn.execute('RESET ROLE')
+
+
 def seed():
     validate_seed_catalog()
     passwords = {role: os.environ[f'{role.upper()}_PASSWORD'] for role in ('manager', 'cashier', 'auditor')}
@@ -260,6 +305,7 @@ def seed():
     try:
         with pool.connection() as conn:
             ensure_product_detail_columns(conn)
+            ensure_receipt_payment_columns(conn)
             for role, name in [('manager', 'Менеджер магазина'), ('cashier', 'Кассир магазина'), ('auditor', 'Аудитор магазина')]:
                 conn.execute('''INSERT INTO app_users(username,display_name,password_hash,role)
                     VALUES (%s,%s,%s,%s) ON CONFLICT(username) DO NOTHING''',

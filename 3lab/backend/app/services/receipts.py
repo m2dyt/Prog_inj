@@ -83,12 +83,23 @@ def fetch_page(conn, *, before: int, limit: int, user):
     }
 
 
-def pay(conn, receipt_id: int, user):
+def pay(conn, receipt_id: int, user, payment):
     receipt = read(conn, receipt_id, user, lock=True)
     if receipt["status"] == "paid":
         return receipt
     if receipt["status"] != "draft":
         raise HTTPException(409, "Отменённый чек нельзя оплатить")
+    cash_received = payment.cash_received
+    change_due = None
+    if payment.payment_method == 'cash':
+        if cash_received < receipt['total']:
+            missing = receipt['total'] - cash_received
+            raise HTTPException(422, f'Недостаточно наличных. Не хватает {missing:.2f} ₽; чек остаётся черновиком.')
+        change_due = cash_received - receipt['total']
+    elif payment.card_outcome == 'declined':
+        raise HTTPException(402, 'Учебный терминал отклонил оплату. Чек остался черновиком.')
+    else:
+        cash_received = None
     products = conn.execute(
         "SELECT * FROM products WHERE id=ANY(%s) ORDER BY id FOR UPDATE",
         ([item["product_id"] for item in receipt["items"]],),
@@ -112,7 +123,11 @@ def pay(conn, receipt_id: int, user):
             VALUES (%s,%s,%s,%s,'Продажа на кассе')""",
             (line["product_id"], user["id"], receipt_id, -line["quantity"]),
         )
-    conn.execute("UPDATE receipts SET status='paid',paid_at=now() WHERE id=%s", (receipt_id,))
+    conn.execute(
+        """UPDATE receipts SET status='paid',paid_at=now(),payment_method=%s,
+        cash_received=%s,change_due=%s WHERE id=%s""",
+        (payment.payment_method, cash_received, change_due, receipt_id),
+    )
     return read(conn, receipt_id, user)
 
 

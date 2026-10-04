@@ -290,17 +290,20 @@ export default function App() {
     }
   }
 
-  async function finish(action) {
+  async function finish(action, payment) {
     setBusy(true);
     setError("");
     try {
       const result = await api(`/receipts/${draft.id}/${action}`, {
         token,
         method: "POST",
+        body: payment,
       });
       setNotice(
         result.status === "paid"
-          ? `Чек №${result.id} оплачен · ${currency(result.total)}`
+          ? result.payment_method === "cash"
+            ? `Чек №${result.id} оплачен наличными · сдача ${currency(result.change_due)}`
+            : `Чек №${result.id} оплачен картой (симуляция) · ${currency(result.total)}`
           : `Чек №${result.id} отменён`,
       );
       setDraft(null);

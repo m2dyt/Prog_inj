@@ -64,6 +64,19 @@ CREATE TABLE receipts (
     status varchar(10) NOT NULL DEFAULT 'draft' CHECK (status IN ('draft','paid','cancelled')),
     created_at timestamptz NOT NULL DEFAULT now(),
     paid_at timestamptz,
+    payment_method varchar(20),
+    cash_received numeric(14,2),
+    change_due numeric(14,2),
+    CONSTRAINT receipts_payment_method_check CHECK (payment_method IS NULL OR payment_method IN ('cash','card_simulated')),
+    CONSTRAINT receipts_cash_received_check CHECK (cash_received IS NULL OR cash_received > 0),
+    CONSTRAINT receipts_change_due_check CHECK (change_due IS NULL OR change_due >= 0),
+    CONSTRAINT receipts_payment_metadata_check CHECK (
+        (status = 'paid' AND (
+            (payment_method = 'cash' AND cash_received IS NOT NULL AND change_due IS NOT NULL)
+            OR (payment_method = 'card_simulated' AND cash_received IS NULL AND change_due IS NULL)
+        ))
+        OR (status <> 'paid' AND payment_method IS NULL AND cash_received IS NULL AND change_due IS NULL)
+    ),
     CHECK ((status = 'paid') = (paid_at IS NOT NULL))
 );
 CREATE INDEX receipts_cashier_id_idx ON receipts(cashier_id, id DESC);
@@ -126,7 +139,7 @@ GRANT INSERT ON products, receipts, receipt_items, stock_movements, sessions TO 
 GRANT UPDATE (barcode, name, category, brand, description, ingredients, proteins, fats,
     carbohydrates, calories, image_url, source_url, price, stock, active, version, updated_at)
     ON products TO market_app;
-GRANT UPDATE (status, paid_at) ON receipts TO market_app;
+GRANT UPDATE (status, paid_at, payment_method, cash_received, change_due) ON receipts TO market_app;
 GRANT DELETE ON sessions TO market_app;
 GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA market TO market_app;
 REVOKE ALL ON ALL FUNCTIONS IN SCHEMA market FROM PUBLIC;
