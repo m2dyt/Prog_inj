@@ -218,6 +218,38 @@ small {
 .location {
   color: #83917b;
 }
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.scanner-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #eaf5ed;
+  color: #2b7a4b;
+  border: 1px solid #c2e2cc;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+}
+.scanner-badge svg {
+  animation: pulse-scanner 2s infinite ease-in-out;
+}
+@keyframes pulse-scanner {
+  0%, 100% {
+    opacity: 0.6;
+    transform: scale(0.95);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.1);
+    color: #1e824c;
+  }
+}
 .catalog {
   padding: 33px 34px 16px;
 }

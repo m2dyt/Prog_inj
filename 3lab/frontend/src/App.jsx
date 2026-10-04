@@ -1,5 +1,5 @@
-import { useCallback, useRef, useState } from "react";
-import { Check, Plus, X } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Check, Plus, ScanLine, X } from "lucide-react";
 
 import Catalog from "./Catalog";
 import { api, currency } from "./api";
@@ -65,7 +65,36 @@ export default function App() {
 
   const locked = Boolean(draft) || busy || creating;
 
-  function add(product) {
+  function playScannerBeep(success = true) {
+    try {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      if (success) {
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(1750, ctx.currentTime);
+        gain.gain.setValueAtTime(0.12, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.08);
+        osc.start(ctx.currentTime);
+        osc.stop(ctx.currentTime + 0.08);
+      } else {
+        osc.type = "sawtooth";
+        osc.frequency.setValueAtTime(220, ctx.currentTime);
+        gain.gain.setValueAtTime(0.18, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.22);
+        osc.start(ctx.currentTime);
+        osc.stop(ctx.currentTime + 0.22);
+      }
+    } catch {
+      // Audio autoplay policy fallback
+    }
+  }
+
+  const add = useCallback((product) => {
     if (locked) return;
     setNotice("");
     requestId.current = null;
@@ -80,7 +109,90 @@ export default function App() {
       }
       return items.length < 100 ? [...items, { ...product, quantity: 1 }] : items;
     });
-  }
+  }, [locked]);
+
+  const handleBarcodeScanned = useCallback(async (barcode) => {
+    if (locked) {
+      playScannerBeep(false);
+      setError("Касса занята оформлением чека. Завершите или отмените текущий чек перед сканированием.");
+      return;
+    }
+    setError("");
+    try {
+      const res = await api(`/products?q=${encodeURIComponent(barcode)}&limit=1`, { token });
+      const found = res.items?.find((p) => p.barcode === barcode) || res.items?.[0];
+      if (!found || found.barcode !== barcode) {
+        playScannerBeep(false);
+        setError(`Товар со штрихкодом "${barcode}" не найден в каталоге`);
+        return;
+      }
+      if (!found.active) {
+        playScannerBeep(false);
+        setError(`Товар "${found.name}" снят с продажи (архивирован)`);
+        return;
+      }
+      const currentQty = cart.find((item) => item.id === found.id)?.quantity || 0;
+      if (currentQty >= found.stock) {
+        playScannerBeep(false);
+        setError(`Товар "${found.name}" закончился на складе (в наличии ${found.stock} шт.)`);
+        return;
+      }
+      add(found);
+      playScannerBeep(true);
+      setNotice(`Отсканировано: ${found.name} (${currency(found.price)})`);
+      setTab("catalog");
+    } catch (requestError) {
+      playScannerBeep(false);
+      handleError(requestError);
+    }
+  }, [locked, token, cart, add]);
+
+  const barcodeBuffer = useRef("");
+  const lastKeyTime = useRef(0);
+
+  useEffect(() => {
+    if (!user || user.role === "auditor") return;
+
+    function onKeyDown(e) {
+      const target = e.target;
+      const isModal = Boolean(target?.closest?.(".product-dialog, .product-details-dialog"));
+      if (isModal) return;
+
+      const isSearchBox = target?.getAttribute?.("aria-label") === "Поиск товара";
+      const now = Date.now();
+      const delta = now - lastKeyTime.current;
+      lastKeyTime.current = now;
+
+      if (e.key === "Enter") {
+        const rawCode = barcodeBuffer.current.trim();
+        barcodeBuffer.current = "";
+        if (/^\d{8,14}$/.test(rawCode)) {
+          e.preventDefault();
+          handleBarcodeScanned(rawCode);
+          return;
+        }
+        if (isSearchBox && target?.value && /^\d{8,14}$/.test(target.value.trim())) {
+          e.preventDefault();
+          handleBarcodeScanned(target.value.trim());
+          return;
+        }
+        return;
+      }
+
+      if (e.key.length === 1 && /^\d$/.test(e.key)) {
+        if (delta > 120 && !isSearchBox) {
+          barcodeBuffer.current = e.key;
+        } else {
+          barcodeBuffer.current += e.key;
+        }
+      } else if (e.key.length === 1 && !/^\d$/.test(e.key) && !isSearchBox) {
+        barcodeBuffer.current = "";
+      }
+    }
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [user, handleBarcodeScanned]);
 
   function change(id, delta) {
     if (locked) return;
@@ -190,7 +302,14 @@ export default function App() {
             Супермаркет <span className="topbar-divider">/</span>{" "}
             {tab === "catalog" ? "Товары" : "Продажи"}
           </span>
-          <span className="location"><span className="dot" /> Магазин №36</span>
+          <div className="topbar-right">
+            {saleAllowed && (
+              <span className="scanner-badge" title="Сканируйте штрихкоды товаров в любой момент для мгновенного добавления в чек">
+                <ScanLine size={14} /> Сканер активен
+              </span>
+            )}
+            <span className="location"><span className="dot" /> Магазин №36</span>
+          </div>
         </header>
         {notice && <div className="notice" role="status"><Check size={18} />{notice}</div>}
         {error && (
