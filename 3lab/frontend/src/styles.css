@@ -846,19 +846,25 @@ form button.primary {
   overflow: auto;
 }
 .details-photo {
-  height: 230px;
-  display: grid;
-  place-items: center;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  min-height: 220px;
+  max-height: 340px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   overflow: hidden;
-  border-radius: 10px;
+  border-radius: 12px;
   background: #f4f7f1;
   color: #899687;
   font-size: 11px;
 }
 .details-photo img {
-  max-width: 100%;
-  max-height: 100%;
-  object-fit: contain;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  display: block;
 }
 .details-price {
   display: flex;
@@ -1342,3 +1348,64 @@ form button.primary {
     flex: 0 0 100%;
   }
 }
+
+.product-card-barcode-strip {
+  margin-top: 14px;
+  width: 100%;
+  background: #ffffff;
+  border: 1px solid #dfe5da;
+  border-radius: 8px;
+  padding: 10px 12px;
+  box-sizing: border-box;
+  text-align: center;
+}
+
+.product-card-barcode-strip .barcode-figure {
+  width: 100%;
+  max-width: 100%;
+  margin: 0 auto;
+  padding: 0;
+  border: none;
+  background: transparent;
+}
+
+.product-card-barcode-strip .barcode-figure.barcode-card svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: none;
+  margin: 0 auto;
+}
+
+.barcode-side-section {
+  border-top: none;
+  padding-top: 0;
+  margin-top: 0;
+  margin-bottom: 20px;
+}
+
+.barcode-side-section h3 {
+  margin-bottom: 10px;
+}
+
+.barcode-side-section .barcode-figure {
+  margin: 0;
+  width: 100%;
+  max-width: 100%;
+}
+
+.barcode-side-section .barcode-figure svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: none;
+}
+
+.session-restoring {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #fbfdf9;
+}
+

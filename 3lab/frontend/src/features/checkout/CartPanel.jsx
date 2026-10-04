@@ -6,11 +6,11 @@ import { cents, currency } from "../../api";
 export default function CartPanel({ cart, draft, busy, creating, locked, onChange, onPrepare, onFinish }) {
   const displayLines = draft
     ? draft.items.map((item) => ({
-        id: item.product_id,
-        name: item.product_name,
-        price: item.unit_price,
-        quantity: item.quantity,
-      }))
+      id: item.product_id,
+      name: item.product_name,
+      price: item.unit_price,
+      quantity: item.quantity,
+    }))
     : cart;
   const count = displayLines.reduce((sum, item) => sum + item.quantity, 0);
   const total = draft

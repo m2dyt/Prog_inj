@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/sh
 set -Eeuo pipefail
 psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -v ON_ERROR_STOP=1 <<'SQL'
 \getenv app_password APP_DB_PASSWORD

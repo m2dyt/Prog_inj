@@ -11,8 +11,21 @@ import CartPanel from "./features/checkout/CartPanel";
 import ReceiptHistory from "./features/receipts/ReceiptHistory";
 
 export default function App() {
-  const [token, setToken] = useState("");
+  const [token, setToken] = useState(() => {
+    try {
+      return localStorage.getItem("market_auth_token") || "";
+    } catch {
+      return "";
+    }
+  });
   const [user, setUser] = useState(null);
+  const [initializing, setInitializing] = useState(() => {
+    try {
+      return Boolean(localStorage.getItem("market_auth_token"));
+    } catch {
+      return false;
+    }
+  });
   const [tab, setTab] = useState("catalog");
   const [cart, setCart] = useState([]);
   const [draft, setDraft] = useState(null);
@@ -29,6 +42,11 @@ export default function App() {
   const [productDetailsId, setProductDetailsId] = useState(null);
 
   const reset = useCallback(() => {
+    try {
+      localStorage.removeItem("market_auth_token");
+    } catch {
+      // ignore storage error
+    }
     setToken("");
     setUser(null);
     setCart([]);
@@ -44,6 +62,37 @@ export default function App() {
     setTab("catalog");
   }, []);
 
+  useEffect(() => {
+    let saved = "";
+    try {
+      saved = localStorage.getItem("market_auth_token") || "";
+    } catch {
+      saved = "";
+    }
+    if (!saved) {
+      setInitializing(false);
+      return;
+    }
+    let active = true;
+    api("/auth/me", { token: saved })
+      .then((me) => {
+        if (active) {
+          setToken(saved);
+          setUser(me);
+          setInitializing(false);
+        }
+      })
+      .catch(() => {
+        if (active) {
+          reset();
+          setInitializing(false);
+        }
+      });
+    return () => {
+      active = false;
+    };
+  }, [reset]);
+
   function handleError(requestError) {
     if (requestError.status === 401) reset();
     else setError(requestError.message);
@@ -51,6 +100,11 @@ export default function App() {
 
   async function login(value) {
     const me = await api("/auth/me", { token: value });
+    try {
+      localStorage.setItem("market_auth_token", value);
+    } catch {
+      // ignore storage error
+    }
     setToken(value);
     setUser(me);
   }
@@ -282,6 +336,14 @@ export default function App() {
     } catch (requestError) {
       handleError(requestError);
     }
+  }
+
+  if (initializing) {
+    return (
+      <div className="session-restoring">
+        <p className="eyebrow">ВОССТАНОВЛЕНИЕ СЕССИИ…</p>
+      </div>
+    );
   }
 
   if (!user) return <Login onLogin={login} />;

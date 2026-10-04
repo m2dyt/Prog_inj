@@ -1,7 +1,10 @@
 name: supermarket-lab3
 services:
   db:
+  
     image: postgres:17-alpine
+    ports:
+      - "127.0.0.1:5433:5432"
     environment:
       POSTGRES_DB: supermarket
       POSTGRES_USER: postgres
@@ -37,6 +40,8 @@ services:
     restart: "no"
   api:
     build: ./backend
+    ports:
+      - "127.0.0.1:8000:8000"
     environment:
       DB_HOST: db
       DB_NAME: supermarket

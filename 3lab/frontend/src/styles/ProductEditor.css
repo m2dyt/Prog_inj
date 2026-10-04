@@ -1,0 +1,35 @@
+.editor-modal-content {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.editor-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.editor-full-width {
+  grid-column: span 2;
+}
+
+.editor-nutrients-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+}
+
+.stock-adjust-card {
+  margin-top: 16px;
+  background: #f9fafb;
+  border-radius: 8px;
+  border: 1px dashed #d1d5db;
+}
+
+.stock-adjust-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 12px;
+}

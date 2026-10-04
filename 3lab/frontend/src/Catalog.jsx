@@ -10,6 +10,7 @@ import {
   Pencil,
 } from "lucide-react";
 import { api, currency, validateProductPage } from "./api";
+import { BarcodeImage } from "./components/ProductDetailsDialog";
 
 const productShape = PropTypes.shape({
   id: PropTypes.number.isRequired,
@@ -48,14 +49,22 @@ export function ProductCard({
       >
         <div className={`product-art ${categoryColors[product.category] || "other"}`}>
           {product.image_url ? (
-            <img src={product.image_url} alt="" loading="lazy" onError={(event) => { event.currentTarget.closest(".product-art")?.classList.add("image-failed"); event.currentTarget.remove(); }} />
+            <img
+              src={product.image_url}
+              alt=""
+              loading="lazy"
+              onError={(event) => {
+                event.currentTarget.closest(".product-art")?.classList.add("image-failed");
+                event.currentTarget.remove();
+              }}
+            />
           ) : (
             <Package size={48} strokeWidth={1.25} aria-hidden="true" />
           )}
           <span>{product.category}</span>
         </div>
         <h3>{product.name}</h3>
-        <span className="details-link">Состав · КБЖУ · штрихкод</span>
+        <span className="details-link">Состав · КБЖУ · подробнее</span>
       </button>
       <div className="product-info">
         <div className="product-meta">
@@ -81,9 +90,7 @@ export function ProductCard({
               <button
                 className="icon-button add"
                 onClick={() => onAdd(product)}
-                disabled={
-                  disabled || !product.active || product.stock <= quantity
-                }
+                disabled={disabled || !product.active || product.stock <= quantity}
                 aria-label={`Добавить ${product.name}`}
               >
                 <Plus size={20} />
@@ -91,13 +98,16 @@ export function ProductCard({
             )}
           </div>
         </div>
-        {quantity > 0 && (
-          <span className="in-cart">В корзине: {quantity} шт.</span>
-        )}
+        {quantity > 0 && <span className="in-cart">В корзине: {quantity} шт.</span>}
+
+        <div className="product-card-barcode-strip" title={`Штрихкод ${product.barcode} (готов к сканированию)`}>
+          <BarcodeImage value={product.barcode} showCaption={false} className="barcode-card" />
+        </div>
       </div>
     </article>
   );
 }
+
 ProductCard.propTypes = {
   product: productShape.isRequired,
   onAdd: PropTypes.func,

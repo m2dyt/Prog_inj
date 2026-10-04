@@ -1,0 +1,126 @@
+.login-wrapper {
+  min-height: 100vh;
+  display: flex;
+  background: linear-gradient(135deg, #091e19 0%, #163b32 100%);
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.login-container {
+  display: flex;
+  width: 100%;
+  max-width: 920px;
+  background: #ffffff;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+}
+
+.login-hero {
+  flex: 1.1;
+  background: linear-gradient(150deg, #103c32 0%, #064e3b 100%);
+  color: #ffffff;
+  padding: 48px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  position: relative;
+  overflow: hidden;
+}
+
+.login-hero-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 22px;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.login-hero-content {
+  margin: 32px 0;
+}
+
+.login-eyebrow {
+  color: #34d399;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.login-hero-title {
+  color: #ffffff !important;
+  font-weight: 800;
+  line-height: 1.2;
+  margin-bottom: 16px;
+}
+
+.login-hero-desc {
+  color: #a7f3d0;
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+.login-hero-bg-icon {
+  position: absolute;
+  right: -20px;
+  bottom: -30px;
+  font-size: 200px;
+  color: rgba(255, 255, 255, 0.05);
+  pointer-events: none;
+}
+
+.login-card {
+  flex: 1;
+  padding: 48px 40px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  background: #ffffff;
+}
+
+.login-card-header {
+  margin-bottom: 24px;
+}
+
+.login-card-title {
+  margin-top: 4px;
+  margin-bottom: 8px;
+  font-weight: 700;
+}
+
+.login-card-subtitle {
+  color: #6b7280;
+  font-size: 13px;
+}
+
+.login-form-error {
+  margin-bottom: 16px;
+}
+
+.login-submit-btn {
+  height: 44px;
+  font-size: 15px;
+  font-weight: 600;
+  border-radius: 8px;
+  margin-top: 8px;
+}
+
+.login-footer-note {
+  margin-top: 24px;
+  text-align: center;
+  color: #9ca3af;
+  font-size: 12px;
+}
+
+@media (max-width: 768px) {
+  .login-container {
+    flex-direction: column;
+  }
+  .login-hero {
+    display: none;
+  }
+}
