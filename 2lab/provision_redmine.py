@@ -542,7 +542,9 @@ def apply(base_url: str, items: list[BacklogItem]) -> None:
     # Listing users requires administrator privileges. Perform this read-only
     # preflight before the first project mutation; empty status includes locked
     # and pending accounts, preventing duplicate-login attempts.
-    existing_users = api.collection("users.json", "users", {"status": ""})
+    # Redmine 6.x rejects the legacy empty status filter with HTTP 422.
+    # The wildcard requests users across active, registered, and locked states.
+    existing_users = api.collection("users.json", "users", {"status": "*"})
     trackers = api.collection("trackers.json", "trackers")
     roles = api.collection("roles.json", "roles")
     # Validate the metadata needed by the CSV before creating accounts/issues.
