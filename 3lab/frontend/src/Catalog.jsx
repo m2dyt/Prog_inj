@@ -16,6 +16,8 @@ const productShape = PropTypes.shape({
   name: PropTypes.string.isRequired,
   barcode: PropTypes.string.isRequired,
   category: PropTypes.string.isRequired,
+  brand: PropTypes.string,
+  image_url: PropTypes.string,
   price: PropTypes.string.isRequired,
   stock: PropTypes.number.isRequired,
   active: PropTypes.bool.isRequired,
@@ -32,18 +34,29 @@ export function ProductCard({
   product,
   onAdd,
   onEdit,
+  onDetails,
   quantity = 0,
   disabled = false,
 }) {
   return (
     <article className="product-card">
-      <div
-        className={`product-art ${categoryColors[product.category] || "other"}`}
-        aria-hidden="true"
+      <button
+        type="button"
+        className="product-details-trigger"
+        onClick={() => onDetails?.(product)}
+        aria-label={`Открыть карточку товара ${product.name}`}
       >
-        <Package size={48} strokeWidth={1.25} />
-        <span>{product.category}</span>
-      </div>
+        <div className={`product-art ${categoryColors[product.category] || "other"}`}>
+          {product.image_url ? (
+            <img src={product.image_url} alt="" loading="lazy" onError={(event) => { event.currentTarget.closest(".product-art")?.classList.add("image-failed"); event.currentTarget.remove(); }} />
+          ) : (
+            <Package size={48} strokeWidth={1.25} aria-hidden="true" />
+          )}
+          <span>{product.category}</span>
+        </div>
+        <h3>{product.name}</h3>
+        <span className="details-link">Состав · КБЖУ · штрихкод</span>
+      </button>
       <div className="product-info">
         <div className="product-meta">
           <span>{product.barcode}</span>
@@ -51,7 +64,6 @@ export function ProductCard({
             {product.stock === 0 ? "Нет в наличии" : `${product.stock} шт.`}
           </span>
         </div>
-        <h3>{product.name}</h3>
         <p className="unit">Цена за 1 шт.</p>
         <div className="product-bottom">
           <strong>{currency(product.price)}</strong>
@@ -90,6 +102,7 @@ ProductCard.propTypes = {
   product: productShape.isRequired,
   onAdd: PropTypes.func,
   onEdit: PropTypes.func,
+  onDetails: PropTypes.func,
   quantity: PropTypes.number,
   disabled: PropTypes.bool,
 };
@@ -99,6 +112,7 @@ export default function Catalog({
   onAdd,
   onEdit,
   onUnauthorized,
+  onDetails,
   cart = [],
   refreshKey = 0,
   disabled = false,
@@ -136,7 +150,7 @@ export default function Catalog({
       q,
       category,
       after: String(cursor),
-      limit: "12",
+      limit: "24",
     });
     api(`/products?${params}`, { token, signal: controller.signal })
       .then(validateProductPage)
@@ -205,7 +219,7 @@ export default function Catalog({
             ? "Введите не менее трёх символов"
             : category || "Все товары"}
         </span>
-        <span>Страница {history.length + 1} · до 12 товаров</span>
+        <span>Страница {history.length + 1} · до 24 товаров</span>
       </div>
       <div className="catalog-content" aria-busy={state.loading}>
         {state.loading ? (
@@ -242,6 +256,7 @@ export default function Catalog({
                 product={product}
                 onAdd={onAdd}
                 onEdit={onEdit}
+                onDetails={onDetails}
                 disabled={disabled}
                 quantity={cart.find((i) => i.id === product.id)?.quantity || 0}
               />
@@ -282,6 +297,7 @@ Catalog.propTypes = {
   onAdd: PropTypes.func,
   onEdit: PropTypes.func,
   onUnauthorized: PropTypes.func.isRequired,
+  onDetails: PropTypes.func,
   cart: PropTypes.arrayOf(
     PropTypes.shape({
       id: PropTypes.number.isRequired,

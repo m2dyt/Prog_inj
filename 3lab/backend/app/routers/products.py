@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request
 
 from ..db import connection
 from ..dependencies import SafeId, current_user, permit
-from ..schemas import ProductCreate, ProductOut, ProductPage, ProductUpdate, StockAdjustment
+from ..schemas import ProductCreate, ProductOut, ProductPage, ProductSummary, ProductUpdate, StockAdjustment
 from ..services import products
 
 router = APIRouter(prefix="/api/products", tags=["products"])
@@ -42,6 +42,16 @@ def create_product(
 ):
     with connection(request) as conn:
         return products.create(conn, body)
+
+
+@router.get("/{product_id}", response_model=ProductOut)
+def get_product(
+    product_id: SafeId,
+    request: Request,
+    user=Depends(current_user),
+):
+    with connection(request) as conn:
+        return products.fetch_one(conn, product_id)
 
 
 @router.put("/{product_id}", response_model=ProductOut)

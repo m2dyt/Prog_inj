@@ -48,6 +48,8 @@ export function validateProductPage(data) {
         typeof p.name === "string" &&
         typeof p.category === "string" &&
         typeof p.barcode === "string" &&
+        (p.brand == null || typeof p.brand === "string") &&
+        (p.image_url == null || typeof p.image_url === "string") &&
         typeof p.active === "boolean" &&
         Number.isSafeInteger(p.stock) &&
         p.stock >= 0 &&

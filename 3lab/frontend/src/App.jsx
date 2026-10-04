@@ -5,6 +5,7 @@ import Catalog from "./Catalog";
 import { api, currency } from "./api";
 import Login from "./components/Login";
 import ProductEditor from "./components/ProductEditor";
+import ProductDetailsDialog from "./components/ProductDetailsDialog";
 import WorkspaceNav from "./components/WorkspaceNav";
 import CartPanel from "./features/checkout/CartPanel";
 import ReceiptHistory from "./features/receipts/ReceiptHistory";
@@ -25,6 +26,7 @@ export default function App() {
   const [receipts, setReceipts] = useState([]);
   const [receiptCursor, setReceiptCursor] = useState(null);
   const [selected, setSelected] = useState(null);
+  const [productDetailsId, setProductDetailsId] = useState(null);
 
   const reset = useCallback(() => {
     setToken("");
@@ -37,6 +39,7 @@ export default function App() {
     setNotice("");
     setError("");
     setSelected(null);
+    setProductDetailsId(null);
     setReceipts([]);
     setTab("catalog");
   }, []);
@@ -205,6 +208,7 @@ export default function App() {
               onAdd={saleAllowed ? add : undefined}
               onEdit={user.role === "manager" ? setEditor : undefined}
               onUnauthorized={reset}
+              onDetails={(product) => setProductDetailsId(product.id)}
               cart={cart}
               refreshKey={refresh}
               disabled={locked}
@@ -254,6 +258,14 @@ export default function App() {
           token={token}
           onClose={() => setEditor(null)}
           onSaved={() => setRefresh((value) => value + 1)}
+        />
+      )}
+      {productDetailsId !== null && (
+        <ProductDetailsDialog
+          productId={productDetailsId}
+          token={token}
+          onClose={() => setProductDetailsId(null)}
+          onUnauthorized={reset}
         />
       )}
     </div>

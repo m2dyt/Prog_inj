@@ -37,6 +37,15 @@ CREATE TABLE products (
     barcode varchar(14) NOT NULL UNIQUE CHECK (barcode ~ '^[0-9]{8,14}$'),
     name varchar(160) NOT NULL CHECK (length(btrim(name)) BETWEEN 2 AND 160),
     category varchar(60) NOT NULL CHECK (length(btrim(category)) BETWEEN 2 AND 60),
+    brand varchar(100),
+    description text,
+    ingredients text,
+    proteins numeric(6,2) CHECK (proteins IS NULL OR proteins BETWEEN 0 AND 1000),
+    fats numeric(6,2) CHECK (fats IS NULL OR fats BETWEEN 0 AND 1000),
+    carbohydrates numeric(6,2) CHECK (carbohydrates IS NULL OR carbohydrates BETWEEN 0 AND 1000),
+    calories numeric(7,2) CHECK (calories IS NULL OR calories BETWEEN 0 AND 10000),
+    image_url text,
+    source_url text,
     price numeric(8,2) NOT NULL CHECK (price > 0 AND price <= 999999.99),
     stock integer NOT NULL DEFAULT 0 CHECK (stock BETWEEN 0 AND 1000000000),
     active boolean NOT NULL DEFAULT true,
@@ -114,7 +123,9 @@ GRANT USAGE ON SCHEMA market TO market_app, market_reader;
 GRANT SELECT ON products, receipts, receipt_items, stock_movements TO market_reader;
 GRANT SELECT ON ALL TABLES IN SCHEMA market TO market_app;
 GRANT INSERT ON products, receipts, receipt_items, stock_movements, sessions TO market_app;
-GRANT UPDATE (barcode, name, category, price, stock, active, version, updated_at) ON products TO market_app;
+GRANT UPDATE (barcode, name, category, brand, description, ingredients, proteins, fats,
+    carbohydrates, calories, image_url, source_url, price, stock, active, version, updated_at)
+    ON products TO market_app;
 GRANT UPDATE (status, paid_at) ON receipts TO market_app;
 GRANT DELETE ON sessions TO market_app;
 GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA market TO market_app;

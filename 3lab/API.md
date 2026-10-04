@@ -9,6 +9,7 @@
 | GET `/auth/me` | Любая | Текущий сотрудник |
 | POST `/auth/logout` | Любая | 204, токен отозван |
 | GET `/products` | Любая | items и next_cursor |
+| GET `/products/{id}` | Любая | Полная карточка: бренд, описание, состав, КБЖУ на 100 г, EAN, URL фотографии и источник |
 | POST `/products` | manager | 201, созданная карточка с stock=0 |
 | PUT `/products/{id}` | manager | Полная карточка с новым version |
 | POST `/products/{id}/stock` | manager | Новый остаток и версия |

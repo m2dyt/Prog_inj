@@ -30,6 +30,15 @@ class ProductCreate(Input):
     barcode: str = Field(pattern=r'^[0-9]{8,14}$')
     name: str = Field(min_length=2, max_length=160)
     category: str = Field(min_length=2, max_length=60)
+    brand: str | None = Field(default=None, max_length=100)
+    description: str | None = Field(default=None, max_length=2000)
+    ingredients: str | None = Field(default=None, max_length=6000)
+    proteins: Annotated[Decimal | None, Field(ge=0, le=1000, max_digits=6, decimal_places=2, allow_inf_nan=False)] = None
+    fats: Annotated[Decimal | None, Field(ge=0, le=1000, max_digits=6, decimal_places=2, allow_inf_nan=False)] = None
+    carbohydrates: Annotated[Decimal | None, Field(ge=0, le=1000, max_digits=6, decimal_places=2, allow_inf_nan=False)] = None
+    calories: Annotated[Decimal | None, Field(ge=0, le=10000, max_digits=7, decimal_places=2, allow_inf_nan=False)] = None
+    image_url: str | None = Field(default=None, max_length=2048, pattern=r'^https://[^\s]+$')
+    source_url: str | None = Field(default=None, max_length=2048, pattern=r'^https://[^\s]+$')
     price: Money
 
 
@@ -72,6 +81,28 @@ class ProductOut(BaseModel):
     barcode: str
     name: str
     category: str
+    brand: str | None = None
+    description: str | None = None
+    ingredients: str | None = None
+    proteins: Decimal | None = None
+    fats: Decimal | None = None
+    carbohydrates: Decimal | None = None
+    calories: Decimal | None = None
+    image_url: str | None = None
+    source_url: str | None = None
+    price: Decimal
+    stock: int
+    active: bool
+    version: int
+
+
+class ProductSummary(BaseModel):
+    id: int
+    barcode: str
+    name: str
+    category: str
+    brand: str | None = None
+    image_url: str | None = None
     price: Decimal
     stock: int
     active: bool
@@ -79,7 +110,7 @@ class ProductOut(BaseModel):
 
 
 class ProductPage(BaseModel):
-    items: list[ProductOut]
+    items: list[ProductSummary]
     next_cursor: int | None
 
 

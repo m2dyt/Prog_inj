@@ -15,6 +15,7 @@ from fastapi.testclient import TestClient
 
 from app.main import app
 from app.security import hash_password
+from app.seed import PRODUCTS, validate_seed_catalog
 
 
 @contextmanager
@@ -135,6 +136,29 @@ def test_cursor_and_duplicate_barcode(client,tokens):
     assert second['items'][0]['id']>first['items'][0]['id']
 
 
+def test_product_details_and_server_validation(client,tokens):
+    p=product(client,tokens)
+    body={k:p[k] for k in ['barcode','name','category','price','version','active']}
+    body.update({
+        'brand':'Тестовый бренд',
+        'description':'Описание товара',
+        'ingredients':'Молоко нормализованное',
+        'proteins':'3.00','fats':'2.50','carbohydrates':'4.70','calories':'53',
+        'image_url':'https://example.test/product.png',
+        'source_url':'https://example.test/product',
+    })
+    changed=client.put(f'/api/products/{p["id"]}',json=body,headers=tokens['manager'])
+    assert changed.status_code==200,changed.text
+    detail=client.get(f'/api/products/{p["id"]}',headers=tokens['cashier'])
+    assert detail.status_code==200,detail.text
+    assert detail.json()['ingredients']=='Молоко нормализованное'
+    assert detail.json()['proteins']=='3.00'
+    assert detail.json()['image_url']=='https://example.test/product.png'
+    body['version']=changed.json()['version']; body['proteins']=-1
+    assert client.put(f'/api/products/{p["id"]}',json=body,headers=tokens['manager']).status_code==422
+    assert client.get('/api/products/9007199254740000',headers=tokens['cashier']).status_code==404
+
+
 def test_database_role_cannot_write_ddl_or_delete_history(client):
     with psycopg.connect(os.environ['DATABASE_URL']) as conn:
         for sql in ['CREATE TABLE market.not_allowed(id integer)', 'DELETE FROM market.receipts', 'UPDATE market.app_users SET active=false']:
@@ -161,10 +185,18 @@ class APIIntegration(unittest.TestCase):
     def test_concurrency(self): test_competing_sales_do_not_oversell(self.client, self.auth)
     def test_transitions(self): test_cancel_version_and_archive(self.client, self.auth)
     def test_pagination(self): test_cursor_and_duplicate_barcode(self.client, self.auth)
+    def test_product_details(self): test_product_details_and_server_validation(self.client, self.auth)
     def test_permissions(self): test_database_role_cannot_write_ddl_or_delete_history(self.client)
     def test_money(self):
         for price in ['-1','0','1.001','NaN','Infinity','1000000.00']:
             with self.subTest(price=price): test_invalid_money(self.client, self.auth, price)
+
+
+class SeedCatalogUnit(unittest.TestCase):
+    def test_seed_cards_are_complete_and_have_unique_valid_ean13(self):
+        validate_seed_catalog()
+        self.assertEqual(len(PRODUCTS), 30)
+        self.assertEqual(len({row[0] for row in PRODUCTS}), 30)
 
 
 if __name__ == '__main__':

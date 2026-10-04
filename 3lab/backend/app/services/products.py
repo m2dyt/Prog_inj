@@ -18,7 +18,7 @@ def fetch_page(conn, *, q: str, category: str, after: int, limit: int, include_a
         values.append(category)
     # Only the fragments above are interpolated; request values stay bound parameters.
     rows = conn.execute(
-        "SELECT id,barcode,name,category,price,stock,active,version FROM products WHERE "
+        "SELECT id,barcode,name,category,brand,image_url,price,stock,active,version FROM products WHERE "
         + " AND ".join(where)
         + " ORDER BY id LIMIT %s",
         [*values, limit + 1],
@@ -29,22 +29,49 @@ def fetch_page(conn, *, q: str, category: str, after: int, limit: int, include_a
     }
 
 
+def fetch_one(conn, product_id: int):
+    row = conn.execute(
+        """SELECT id,barcode,name,category,brand,description,ingredients,
+        proteins,fats,carbohydrates,calories,image_url,source_url,
+        price,stock,active,version FROM products WHERE id=%s AND active""",
+        (product_id,),
+    ).fetchone()
+    if not row:
+        raise HTTPException(404, "Товар не найден")
+    return row
+
+
 def create(conn, body):
     return conn.execute(
-        """INSERT INTO products(barcode,name,category,price) VALUES (%s,%s,%s,%s)
+        """INSERT INTO products(barcode,name,category,brand,description,ingredients,
+        proteins,fats,carbohydrates,calories,image_url,source_url,price)
+        VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
         RETURNING *""",
-        (body.barcode, body.name, body.category, body.price),
+        (body.barcode, body.name, body.category, body.brand, body.description,
+         body.ingredients, body.proteins, body.fats, body.carbohydrates,
+         body.calories, body.image_url, body.source_url, body.price),
     ).fetchone()
 
 
 def update(conn, product_id: int, body):
     row = conn.execute(
-        """UPDATE products SET barcode=%s,name=%s,category=%s,price=%s,active=%s,
+        """UPDATE products SET barcode=%s,name=%s,category=%s,brand=%s,description=%s,
+        ingredients=%s,proteins=%s,fats=%s,carbohydrates=%s,calories=%s,
+        image_url=%s,source_url=%s,price=%s,active=%s,
         version=version+1,updated_at=now() WHERE id=%s AND version=%s RETURNING *""",
         (
             body.barcode,
             body.name,
             body.category,
+            body.brand,
+            body.description,
+            body.ingredients,
+            body.proteins,
+            body.fats,
+            body.carbohydrates,
+            body.calories,
+            body.image_url,
+            body.source_url,
             body.price,
             body.active,
             product_id,
