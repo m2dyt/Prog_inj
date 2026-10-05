@@ -34,8 +34,8 @@ describe("catalog contract", () => {
     expect(open).toHaveBeenCalledWith(product);
     expect(isValidEan13(product.barcode)).toBe(true);
     const { container } = render(<BarcodeImage value={product.barcode} />);
-    expect(container.querySelector("svg")?.getAttribute("aria-label")).toBe(`Штрихкод ${product.barcode}`);
-    expect(container.querySelectorAll("rect").length).toBeGreaterThan(35);
+    expect(screen.getByRole("img", { name: `Штрихкод ${product.barcode}` })).toBeInTheDocument();
+    expect(container.querySelectorAll("rect").length).toBeGreaterThan(25);
     expect(isValidEan13("4602547000880")).toBe(false);
   });
   it("loads product composition, nutrition, photo and barcode through the API", async () => {

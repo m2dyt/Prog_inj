@@ -38,6 +38,7 @@ export function ProductCard({
   onDetails,
   quantity = 0,
   disabled = false,
+  showBarcode = false,
 }) {
   return (
     <article className="product-card">
@@ -52,7 +53,9 @@ export function ProductCard({
             <img
               src={product.image_url}
               alt=""
-              loading="lazy"
+              loading="eager"
+              decoding="async"
+              referrerPolicy="no-referrer"
               onError={(event) => {
                 event.currentTarget.closest(".product-art")?.classList.add("image-failed");
                 event.currentTarget.remove();
@@ -68,7 +71,7 @@ export function ProductCard({
       </button>
       <div className="product-info">
         <div className="product-meta">
-          <span>{product.barcode}</span>
+          <span>{showBarcode ? product.barcode : (product.brand || product.category)}</span>
           <span className={product.stock === 0 ? "stock empty" : "stock"}>
             {product.stock === 0 ? "Нет в наличии" : `${product.stock} шт.`}
           </span>
@@ -81,9 +84,11 @@ export function ProductCard({
               <button
                 className="icon-button edit"
                 aria-label={`Изменить ${product.name}`}
+                title="Редактировать карточку и остатки товара"
                 onClick={() => onEdit(product)}
               >
-                <Pencil size={17} />
+                <Pencil size={15} />
+                <span>Ред.</span>
               </button>
             )}
             {onAdd && (
@@ -92,6 +97,7 @@ export function ProductCard({
                 onClick={() => onAdd(product)}
                 disabled={disabled || !product.active || product.stock <= quantity}
                 aria-label={`Добавить ${product.name}`}
+                title="Добавить в чек"
               >
                 <Plus size={20} />
               </button>
@@ -100,9 +106,11 @@ export function ProductCard({
         </div>
         {quantity > 0 && <span className="in-cart">В корзине: {quantity} шт.</span>}
 
-        <div className="product-card-barcode-strip" title={`Штрихкод ${product.barcode} (готов к сканированию)`}>
-          <BarcodeImage value={product.barcode} showCaption={false} className="barcode-card" />
-        </div>
+        {showBarcode && (
+          <div className="product-card-barcode-strip" title={`Штрихкод ${product.barcode} (готов к сканированию кассиром)`}>
+            <BarcodeImage value={product.barcode} showCaption={false} className="barcode-card" />
+          </div>
+        )}
       </div>
     </article>
   );
@@ -115,17 +123,20 @@ ProductCard.propTypes = {
   onDetails: PropTypes.func,
   quantity: PropTypes.number,
   disabled: PropTypes.bool,
+  showBarcode: PropTypes.bool,
 };
 
 export default function Catalog({
   token,
   onAdd,
   onEdit,
+  onCreate,
   onUnauthorized,
   onDetails,
   cart = [],
   refreshKey = 0,
   disabled = false,
+  showBarcode = false,
 }) {
   const [search, setSearch] = useState("");
   const [q, setQ] = useState("");
@@ -193,9 +204,16 @@ export default function Catalog({
           <h1>Каталог товаров</h1>
           <p className="muted">Всё для покупок, которые радуют каждый день.</p>
         </div>
-        <span className="quiet-badge">
-          <SlidersHorizontal size={15} /> Поиск и фильтры
-        </span>
+        <div className="heading-actions">
+          {onCreate && (
+            <button className="button primary manager-new-btn" onClick={onCreate}>
+              <Plus size={16} /> Добавить товар
+            </button>
+          )}
+          <span className="quiet-badge">
+            <SlidersHorizontal size={15} /> Поиск и фильтры
+          </span>
+        </div>
       </div>
       <div className="search-row">
         <label className="search-box">
@@ -268,6 +286,7 @@ export default function Catalog({
                 onEdit={onEdit}
                 onDetails={onDetails}
                 disabled={disabled}
+                showBarcode={showBarcode}
                 quantity={cart.find((i) => i.id === product.id)?.quantity || 0}
               />
             ))}
@@ -306,6 +325,7 @@ Catalog.propTypes = {
   token: PropTypes.string.isRequired,
   onAdd: PropTypes.func,
   onEdit: PropTypes.func,
+  onCreate: PropTypes.func,
   onUnauthorized: PropTypes.func.isRequired,
   onDetails: PropTypes.func,
   cart: PropTypes.arrayOf(
@@ -316,4 +336,5 @@ Catalog.propTypes = {
   ),
   refreshKey: PropTypes.number,
   disabled: PropTypes.bool,
+  showBarcode: PropTypes.bool,
 };

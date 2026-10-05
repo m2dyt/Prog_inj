@@ -1,20 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import PropTypes from "prop-types";
-import { X } from "lucide-react";
+import { Package, X } from "lucide-react";
+import Barcode from "react-barcode";
 import { api, currency } from "../api";
-
-const LEFT = [
-  "0001101", "0011001", "0010011", "0111101", "0100011",
-  "0110001", "0101111", "0111011", "0110111", "0001011",
-];
-const LEFT_G = [
-  "0100111", "0110011", "0011011", "0100001", "0011101",
-  "0111001", "0000101", "0010001", "0001001", "0010111",
-];
-const PARITY = [
-  "LLLLLL", "LLGLGG", "LLGGLG", "LLGGGL", "LGLLGG",
-  "LGGLLG", "LGGGLL", "LGLGLG", "LGLGGL", "LGGLGL",
-];
 
 export function isValidEan13(value) {
   if (!/^\d{13}$/.test(value)) return false;
@@ -25,67 +13,34 @@ export function isValidEan13(value) {
   return (10 - (sum % 10)) % 10 === digits[12];
 }
 
-function eanBits(value) {
-  if (!isValidEan13(value)) return "";
-  const digits = [...value].map(Number);
-  const parity = PARITY[digits[0]];
-  let bits = "101";
-  for (let index = 1; index <= 6; index += 1) {
-    bits += (parity[index - 1] === "L" ? LEFT : LEFT_G)[digits[index]];
-  }
-  bits += "01010";
-  for (let index = 7; index <= 12; index += 1) {
-    bits += [...LEFT[digits[index]]].map((bit) => (bit === "1" ? "0" : "1")).join("");
-  }
-  return bits + "101";
-}
-
 export function BarcodeImage({ value, showCaption = true, className = "" }) {
-  const bits = useMemo(() => eanBits(value), [value]);
-  if (!bits) {
+  if (!isValidEan13(value)) {
     return <p className="barcode-unavailable">Для этого товара нет корректного EAN‑13.</p>;
   }
-  const bars = [...bits].flatMap((bit, index) =>
-    bit === "1"
-      ? [
-          <rect
-            key={index}
-            x={index + 12}
-            y="5"
-            width="1"
-            height={
-              index < 3 || (index >= 45 && index < 50) || index >= 92
-                ? 68
-                : 62
-            }
-          />,
-        ]
-      : []
-  );
 
   return (
     <figure
       className={`barcode-figure ${className}`.trim()}
       aria-label={`Штрихкод EAN-13 ${value}`}
     >
-      <svg
-        viewBox="0 0 119 78"
+      <div
         role="img"
         aria-label={`Штрихкод ${value}`}
-        shapeRendering="crispEdges"
+        style={{ display: "inline-flex", justifyContent: "center", maxWidth: "100%", overflow: "hidden" }}
       >
-        <g fill="currentColor">{bars}</g>
-        <text x="2" y="76" fontSize="7" fontFamily="monospace">
-          {value[0]}
-        </text>
-        <text x="16" y="76" fontSize="7" fontFamily="monospace">
-          {value.slice(1, 7)}
-        </text>
-        <text x="60" y="76" fontSize="7" fontFamily="monospace">
-          {value.slice(7)}
-        </text>
-      </svg>
-      {showCaption && <figcaption>{value} · EAN‑13</figcaption>}
+        <Barcode
+          value={value}
+          format="EAN13"
+          width={1.6}
+          height={54}
+          displayValue={showCaption}
+          font="monospace"
+          fontSize={13}
+          margin={4}
+          background="transparent"
+          lineColor="#1e293b"
+        />
+      </div>
     </figure>
   );
 }
@@ -204,10 +159,17 @@ export default function ProductDetailsDialog({
                 <img
                   src={product.image_url}
                   alt={`Упаковка товара «${product.name}»`}
+                  loading="eager"
+                  decoding="async"
+                  referrerPolicy="no-referrer"
                   onError={() => setImageFailed(true)}
                 />
               ) : (
-                <span>Фото пока не добавлено</span>
+                <div className="details-photo-fallback">
+                  <Package size={48} strokeWidth={1.25} />
+                  <span>Фото упаковки отсутствует</span>
+                  <small>{product.category}</small>
+                </div>
               )}
             </div>
             <div className="details-price">

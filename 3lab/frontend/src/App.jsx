@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Check, Plus, ScanLine, X } from "lucide-react";
+import { Check, Plus, ScanLine, ShieldCheck, SlidersHorizontal, X } from "lucide-react";
 
 import Catalog from "./Catalog";
 import { api, currency } from "./api";
@@ -351,7 +351,10 @@ export default function App() {
 
   if (!user) return <Login onLogin={login} />;
 
-  const saleAllowed = user.role !== "auditor";
+  const isCashier = user.role === "cashier";
+  const isManager = user.role === "manager";
+  const isAuditor = user.role === "auditor";
+  const saleAllowed = !isAuditor;
   return (
     <div className="workspace">
       <WorkspaceNav
@@ -368,9 +371,19 @@ export default function App() {
             {tab === "catalog" ? "Товары" : "Продажи"}
           </span>
           <div className="topbar-right">
-            {saleAllowed && (
-              <span className="scanner-badge" title="Сканируйте штрихкоды товаров в любой момент для мгновенного добавления в чек">
-                <ScanLine size={14} /> Сканер активен
+            {isCashier && (
+              <span className="scanner-badge cashier" title="Сканируйте штрихкоды товаров в любой момент для мгновенного добавления в чек">
+                <ScanLine size={14} /> Сканер активен · Касса
+              </span>
+            )}
+            {isManager && (
+              <span className="role-badge manager" title="Режим управления номенклатурой и складскими остатками">
+                <SlidersHorizontal size={14} /> Управление складом
+              </span>
+            )}
+            {isAuditor && (
+              <span className="role-badge auditor" title="Режим финансовой ревизии (только просмотр)">
+                <ShieldCheck size={14} /> Режим ревизии (Read Only)
               </span>
             )}
             <span className="location"><span className="dot" /> Магазин №36</span>
@@ -386,25 +399,18 @@ export default function App() {
           </div>
         )}
         {tab === "catalog" ? (
-          <>
-            <Catalog
-              token={token}
-              onAdd={saleAllowed ? add : undefined}
-              onEdit={user.role === "manager" ? setEditor : undefined}
-              onUnauthorized={reset}
-              onDetails={(product) => setProductDetailsId(product.id)}
-              cart={cart}
-              refreshKey={refresh}
-              disabled={locked}
-            />
-            {user.role === "manager" && (
-              <div className="manager-actions">
-                <button className="button secondary" onClick={() => setEditor({})}>
-                  <Plus size={16} /> Новый товар
-                </button>
-              </div>
-            )}
-          </>
+          <Catalog
+            token={token}
+            onAdd={saleAllowed ? add : undefined}
+            onEdit={isManager ? setEditor : undefined}
+            onCreate={isManager ? () => setEditor({}) : undefined}
+            onUnauthorized={reset}
+            onDetails={(product) => setProductDetailsId(product.id)}
+            cart={cart}
+            refreshKey={refresh}
+            disabled={locked}
+            showBarcode={isCashier}
+          />
         ) : (
           <ReceiptHistory
             userRole={user.role}
